@@ -1,13 +1,18 @@
 local E, L, V, P, G = unpack(ElvUI)
-local B = E:GetModule('Blizzard')
+local BL = E:GetModule('Blizzard')
 local LSM = E.Libs.LSM
 
 local _G = _G
-local UnitXP = UnitXP
-local UnitXPMax = UnitXPMax
-local GetRewardXP = GetRewardXP
+local CreateFrame = CreateFrame
 local GetCurrentRegion = GetCurrentRegion
 local GetQuestLogRewardXP = GetQuestLogRewardXP
+local GetRewardXP = GetRewardXP
+local RegisterStateDriver = RegisterStateDriver
+local UIParent = UIParent
+local UnitXP = UnitXP
+local UnitXPMax = UnitXPMax
+local UnregisterStateDriver = UnregisterStateDriver
+
 local C_QuestLog_ShouldShowQuestRewards = C_QuestLog.ShouldShowQuestRewards
 local C_QuestLog_GetSelectedQuest = C_QuestLog.GetSelectedQuest
 local hooksecurefunc = hooksecurefunc
@@ -30,14 +35,14 @@ local function PostMove(mover)
 	mover.parent:Point(point, mover)
 end
 
-function B:RepositionFrame(frame, _, anchor)
+function BL:RepositionFrame(frame, _, anchor)
 	if anchor ~= frame.mover then
 		frame:ClearAllPoints()
 		frame:Point(frame.mover.anchorPoint or 'TOPLEFT', frame.mover, frame.mover.anchorPoint or 'TOPLEFT')
 	end
 end
 
-function B:QuestXPPercent()
+function BL:QuestXPPercent()
 	if not E.db.general.questXPPercent then return end
 
 	local unitXP, unitXPMax = UnitXP('player'), UnitXPMax('player')
@@ -59,11 +64,11 @@ function B:QuestXPPercent()
 	end
 end
 
-function B:HandleAddonCompartment()
+function BL:HandleAddonCompartment()
 	local compartment = _G.AddonCompartmentFrame
 	if compartment then
 		if not compartment.mover then
-			compartment:SetParent(_G.UIParent)
+			compartment:SetParent(UIParent)
 			compartment:SetFrameLevel(10) -- over minimap mover
 			compartment:ClearAllPoints()
 			compartment:Point('RIGHT', _G.ElvUI_MinimapHolder or _G.Minimap, -5, 10)
@@ -79,49 +84,83 @@ function B:HandleAddonCompartment()
 			compartment.Text:FontTemplate(LSM:Fetch('font', db.font), db.fontSize, db.fontOutline)
 			compartment:SetFrameLevel(db.frameLevel or 20)
 			compartment:SetFrameStrata(db.frameStrata or 'MEDIUM')
-			compartment:SetParent(_G.UIParent)
+			compartment:SetParent(UIParent)
 			compartment:Size(db.size or 18)
 		end
 	end
 end
 
-function B:Initialize()
-	B.Initialized = true
+function BL:ObjectiveTracker_HasQuestTracker()
+	return E:IsAddOnEnabled('!KalielsTracker') or E:IsAddOnEnabled('DugisGuideViewerZ')
+end
 
-	B:EnhanceColorPicker()
-	B:AlertMovers()
-	B:HandleWidgets()
-	B:PositionCaptureBar()
+function BL:ObjectiveTracker_AutoHide()
+	local tracker = (E.Wrath and _G.WatchFrame) or _G.ObjectiveTrackerFrame
+	if not tracker then return end
+
+	if not tracker.AutoHider then
+		tracker.AutoHider = CreateFrame('Frame', nil, tracker, 'SecureHandlerStateTemplate')
+		tracker.AutoHider:SetAttribute('_onstate-objectiveHider', 'if newstate == 1 then self:Hide() else self:Show() end')
+		tracker.AutoHider:SetScript('OnHide', BL.ObjectiveTracker_AutoHideOnHide)
+		tracker.AutoHider:SetScript('OnShow', BL.ObjectiveTracker_AutoHideOnShow)
+	end
+
+	if E.db.general.objectiveFrameAutoHide then
+		RegisterStateDriver(tracker.AutoHider, 'objectiveHider', '[@arena1,exists][@arena2,exists][@arena3,exists][@arena4,exists][@arena5,exists][@boss1,exists][@boss2,exists][@boss3,exists][@boss4,exists][@boss5,exists] 1;0')
+	else
+		UnregisterStateDriver(tracker.AutoHider, 'objectiveHider')
+	end
+end
+
+function BL:ADDON_LOADED(_, addon)
+	if addon == 'Blizzard_GuildBankUI' then
+		BL:ImproveGuildBank()
+	elseif BL.TryDisableTutorials then
+		BL:ShutdownTutorials()
+	end
+end
+
+function BL:Initialize()
+	BL.Initialized = true
+
+	BL:EnhanceColorPicker()
+	BL:AlertMovers()
+	BL:HandleWidgets()
+	BL:PositionCaptureBar()
+
+	BL:RegisterEvent('ADDON_LOADED')
 
 	if not E.Retail then
-		B:KillBlizzard()
+		BL:KillBlizzard()
 	else
-		B:DisableHelpTip()
-		B:DisableTutorials()
-		B:SkinBlizzTimers()
-		B:HandleTalkingHead()
-		B:HandleAddonCompartment()
+		BL:DisableHelpTip()
+		BL:DisableTutorials()
+		BL:SkinBlizzTimers()
+		BL:HandleTalkingHead()
+		BL:HandleAddonCompartment()
 
 		E:CreateMover(_G.LossOfControlFrame, 'LossControlMover', L["Loss Control Icon"])
 
 		--Add (+X%) to quest rewards experience text
-		B:SecureHook('QuestInfo_Display', 'QuestXPPercent')
+		BL:SecureHook('QuestInfo_Display', 'QuestXPPercent')
 
 		if not E:IsAddOnEnabled('SimplePowerBar') then
-			B:PositionAltPowerBar()
-			B:SkinAltPowerBar()
+			BL:PositionAltPowerBar()
+			BL:SkinAltPowerBar()
 		end
 	end
 
-	if not E.Classic then
-		B:PositionVehicleFrame()
+	if E.Wrath then
+		BL:PositionVehicleFrame()
+	end
 
-		if not (E:IsAddOnEnabled('DugisGuideViewerZ') or E:IsAddOnEnabled('!KalielsTracker')) then
-			B:MoveObjectiveFrame()
+	if E.Classic then
+		if E.db.general.objectiveTracker then
+			BL:QuestWatch_MoveFrames()
+			hooksecurefunc('QuestWatch_Update', BL.QuestWatch_AddQuestClick)
 		end
-	elseif E.db.general.objectiveTracker then -- classic check
-		B:QuestWatch_MoveFrames()
-		hooksecurefunc('QuestWatch_Update', B.QuestWatch_AddQuestClick)
+	elseif not BL:ObjectiveTracker_HasQuestTracker() then
+		BL:ObjectiveTracker_Setup()
 	end
 
 	local MinimapAnchor = _G.ElvUI_MinimapHolder or _G.Minimap
@@ -130,15 +169,15 @@ function B:Initialize()
 		_G.BNToastFrame:Point('TOPRIGHT', MinimapAnchor, 'BOTTOMRIGHT', 0, -10)
 		E:CreateMover(_G.BNToastFrame, 'BNETMover', L["BNet Frame"], nil, nil, PostMove)
 		_G.BNToastFrame.mover:Size(_G.BNToastFrame:GetSize())
-		B:SecureHook(_G.BNToastFrame, 'SetPoint', 'RepositionFrame')
+		BL:SecureHook(_G.BNToastFrame, 'SetPoint', 'RepositionFrame')
 	end
 
 	if GetCurrentRegion() == 2 then -- TimeAlertFrame Frame
 		_G.TimeAlertFrame:Point('TOPRIGHT', MinimapAnchor, 'BOTTOMRIGHT', 0, -80)
 		E:CreateMover(_G.TimeAlertFrame, 'TimeAlertFrameMover', L["Time Alert Frame"], nil, nil, PostMove)
 		_G.TimeAlertFrame.mover:Size(_G.TimeAlertFrame:GetSize())
-		B:SecureHook(_G.TimeAlertFrame, 'SetPoint', 'RepositionFrame')
+		BL:SecureHook(_G.TimeAlertFrame, 'SetPoint', 'RepositionFrame')
 	end
 end
 
-E:RegisterModule(B:GetName())
+E:RegisterModule(BL:GetName())

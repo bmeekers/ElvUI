@@ -25,7 +25,7 @@ local function GetSelectedFilters()
 	local pet = selectedFilter == 'Aura Indicator (Pet)'
 	local profile = selectedFilter == 'Aura Indicator (Profile)'
 	local selected = (profile and E.db.unitframe.filters.aurawatch) or (pet and E.global.unitframe.aurawatch.PET) or (class and E.global.unitframe.aurawatch[E.myclass]) or E.global.unitframe.aurawatch.GLOBAL
-	local default = (profile and P.unitframe.filters.aurawatch) or (pet and G.unitframe.aurawatch.PET) or class and G.unitframe.aurawatch[E.myclass] or G.unitframe.aurawatch.GLOBAL
+	local default = (profile and P.unitframe.filters.aurawatch) or (pet and G.unitframe.aurawatch.PET) or (class and G.unitframe.aurawatch[E.myclass]) or G.unitframe.aurawatch.GLOBAL
 	return selected or {}, default
 end
 
@@ -358,7 +358,7 @@ local function debuffIndicator(info, value)
 	end
 end
 
-E.Options.args.filters = ACH:Group(L["FILTERS"], nil, 3, 'tab')
+E.Options.args.filters = ACH:Group(L["Filters"], nil, 3, 'tab')
 local Filters = E.Options.args.filters.args
 
 Filters.mainOptions = ACH:Group(L["Main Options"], nil, 1)
@@ -400,6 +400,11 @@ Filters.mainOptions.args.auraIndicator.args.countGroup.args.countAnchor = ACH:Se
 Filters.mainOptions.args.auraIndicator.args.countGroup.args.countX = ACH:Range(L["X-Offset"], nil, 2, { min = -75, max = 75, step = 1 })
 Filters.mainOptions.args.auraIndicator.args.countGroup.args.countY = ACH:Range(L["Y-Offset"], nil, 3, { min = -75, max = 75, step = 1 })
 
+Filters.mainOptions.args.auraIndicator.args.cooldownGroup = ACH:Group(L["Cooldown Text"], nil, 25)
+Filters.mainOptions.args.auraIndicator.args.cooldownGroup.args.cooldownAnchor = ACH:Select(L["Anchor Point"], nil, 1, C.Values.AllPoints)
+Filters.mainOptions.args.auraIndicator.args.cooldownGroup.args.cooldownX = ACH:Range(L["X-Offset"], nil, 2, { min = -75, max = 75, step = 1 })
+Filters.mainOptions.args.auraIndicator.args.cooldownGroup.args.cooldownY = ACH:Range(L["Y-Offset"], nil, 3, { min = -75, max = 75, step = 1 })
+
 Filters.mainOptions.args.spellGroup = ACH:Group(function() return GetSpellNameRank(GetSelectedSpell()) end, nil, -15, nil, FilterSettings, FilterSettings, nil, function() return not selectedSpell or (selectedFilter == 'Aura Indicator (Pet)' or selectedFilter == 'Aura Indicator (Profile)' or selectedFilter == 'Aura Indicator (Class)' or selectedFilter == 'Aura Indicator (Global)') end)
 Filters.mainOptions.args.spellGroup.inline = true
 Filters.mainOptions.args.spellGroup.args.enable = ACH:Toggle(L["Enable"], nil, 0, nil, nil, nil, nil, nil, nil, function() return (selectedFilter == 'Aura Indicator (Pet)' or selectedFilter == 'Aura Indicator (Profile)' or selectedFilter == 'Aura Indicator (Class)' or selectedFilter == 'Aura Indicator (Global)') end)
@@ -415,39 +420,35 @@ Filters.mainOptions.args.spellGroup.args.ownOnly = ACH:Toggle(L["Casted by Playe
 
 Filters.help = ACH:Group(L["Help"], nil, 2)
 
-local COLOR = E:ClassColor(E.myclass, true)
-local COLOR1 = format('|c%s', COLOR.colorStr)
-local COLOR2 = '|cFFFFFFFF'
-
 local FilterHelp = {
-	'*Whitelists:|r ^Boss, Mount, MyPet, OtherPet, Personal, nonPersonal, CastByUnit, notCastByUnit, Dispellable (includes steal-able), notDispellable, CastByNPC, CastByPlayers, BlizzardNameplate|r',
-	'*Blacklists:|r ^blockMount, blockNonPersonal, blockCastByPlayers, blockNoDuration, blockDispellable, blockNotDispellable | A blacklist filter is only effective against filters that come after it in the priority list. It will not block anything from the filters before it.|r',
-	'^A blacklist filter is only effective against filters that come after it in the priority list. It will not block anything from the filters before it.',
+	L["*Whitelists:|r ^Boss, Mount, MyPet, OtherPet, Personal, nonPersonal, CastByUnit, notCastByUnit, Dispellable (includes steal-able), notDispellable, CastByNPC, CastByPlayers, BlizzardNameplate|r"],
+	L["*Blacklists:|r ^blockMount, blockNonPersonal, blockCastByPlayers, blockNoDuration, blockDispellable, blockNotDispellable | A blacklist filter is only effective against filters that come after it in the priority list. It will not block anything from the filters before it.|r"],
+	L["^A blacklist filter is only effective against filters that come after it in the priority list. It will not block anything from the filters before it."],
 	' ',
-	'*Boss:|r ^Auras (debuffs only?) cast by a boss unit.|r',
-	'*Mount:|r ^Auras which are classified as mounts.|r',
-	'*Personal:|r ^Auras cast by yourself.|r',
-	'*nonPersonal:|r ^Auras cast by anyone other than yourself.|r',
-	'*CastByUnit:|r ^Auras cast by the unit of the unitframe or nameplate (so on target frame it only shows auras cast by the target unit).|r',
-	'*notCastByUnit:|r ^Auras cast by anyone other than the unit of the unitframe or nameplate.|r',
-	'*Dispellable:|r ^Auras you can either dispel or spellsteal.|r',
-	'*CastByNPC:|r ^Auras cast by any NPC.|r',
-	'*CastByPlayers:|r ^Auras cast by any player-controlled unit (so no NPCs).|r',
-	'*blockCastByPlayers:|r ^Blocks any aura that is cast by player-controlled units (so will only show auras cast by NPCs).|r',
-	'*blockNoDuration:|r ^Blocks any aura without a duration.|r',
-	'*blockNonPersonal:|r ^Blocks any aura that is not cast by yourself.|r',
+	L["*Boss:|r ^Auras (debuffs only?) cast by a boss unit.|r"],
+	L["*Mount:|r ^Auras which are classified as mounts.|r"],
+	L["*Personal:|r ^Auras cast by yourself.|r"],
+	L["*nonPersonal:|r ^Auras cast by anyone other than yourself.|r"],
+	L["*CastByUnit:|r ^Auras cast by the unit of the unitframe or nameplate (so on target frame it only shows auras cast by the target unit).|r"],
+	L["*notCastByUnit:|r ^Auras cast by anyone other than the unit of the unitframe or nameplate.|r"],
+	L["*Dispellable:|r ^Auras you can either dispel or spellsteal.|r"],
+	L["*CastByNPC:|r ^Auras cast by any NPC.|r"],
+	L["*CastByPlayers:|r ^Auras cast by any player-controlled unit (so no NPCs).|r"],
+	L["*blockCastByPlayers:|r ^Blocks any aura that is cast by player-controlled units (so will only show auras cast by NPCs).|r"],
+	L["*blockNoDuration:|r ^Blocks any aura without a duration.|r"],
+	L["*blockNonPersonal:|r ^Blocks any aura that is not cast by yourself.|r"],
 	' ',
-	'*Show Everything:|r ^Set "Max Duration" to 0 & Leave Priority List Empty or (1) Personal | (2) nonPersonal',
-	'*Block Blacklisted Auras, Show Everything Else:|r ^(1) Blacklist| (2) Personal | (3) nonPersonal',
-	'*Block Auras Without Duration, Show Everything Else:|r ^(1) blockNoDuration | (2) Personal | (3) nonPersonal',
-	'*Block Auras Without Duration, Block Blacklisted Auras, Show Everything Else:|r ^(1) blockNoDuration | (2) Blacklist | (3) Personal | (4) nonPersonal',
-	'*Block Everything, Except Your Own Auras:|r ^(1) Personal',
-	'*Block Everything, Except Whitelisted Auras:|r ^(1) Whitelist',
-	'*Block Everything, Except Whitelisted Auras That Are Cast By Yourself:|r ^(1) blockNonPersonal | (2) Whitelist'
+	L["*Show Everything:|r ^Set 'Max Duration' to 0 & Leave Priority List Empty or (1) Personal | (2) nonPersonal"],
+	L["*Block Blacklisted Auras, Show Everything Else:|r ^(1) Blacklist| (2) Personal | (3) nonPersonal"],
+	L["*Block Auras Without Duration, Show Everything Else:|r ^(1) blockNoDuration | (2) Personal | (3) nonPersonal"],
+	L["*Block Auras Without Duration, Block Blacklisted Auras, Show Everything Else:|r ^(1) blockNoDuration | (2) Blacklist | (3) Personal | (4) nonPersonal"],
+	L["*Block Everything, Except Your Own Auras:|r ^(1) Personal"],
+	L["*Block Everything, Except Whitelisted Auras:|r ^(1) Whitelist"],
+	L["*Block Everything, Except Whitelisted Auras That Are Cast By Yourself:|r ^(1) blockNonPersonal | (2) Whitelist"]
 }
 
 for i, text in ipairs(FilterHelp) do
-	Filters.help.args['help'..i] = ACH:Description(text:gsub('*', COLOR1):gsub('%^', COLOR2), i, 'medium')
+	Filters.help.args['help'..i] = ACH:Description(text:gsub('*', E.InfoColor):gsub('%^', '|cFFffffff'), i, 'medium')
 end
 
 function C:SetToFilterConfig(filter)

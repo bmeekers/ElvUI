@@ -5,12 +5,12 @@ local wipe, sort, unpack = wipe, sort, unpack
 local next, pairs, tinsert = next, pairs, tinsert
 
 local CreateFrame = CreateFrame
-local GetAddOnInfo = GetAddOnInfo
-local GetCVarBool = GetCVarBool
-local GetNumAddOns = GetNumAddOns
 local GetRealZoneText = GetRealZoneText
-local GetSpecialization = GetSpecialization
-local GetSpecializationInfo = GetSpecializationInfo
+
+local GetCVarBool = C_CVar.GetCVarBool
+local GetAddOnInfo = (C_AddOns and C_AddOns.GetAddOnInfo) or GetAddOnInfo
+local GetNumAddOns = (C_AddOns and C_AddOns.GetNumAddOns) or GetNumAddOns
+
 local UNKNOWN = UNKNOWN
 
 function E:AreOtherAddOnsEnabled()
@@ -30,65 +30,8 @@ function E:GetDisplayMode()
 	return GetCVarBool('gxMaximize') and 'Fullscreen' or 'Windowed'
 end
 
-local EnglishClassName = {
-	DEATHKNIGHT = 'Death Knight',
-	DEMONHUNTER = 'Demon Hunter',
-	DRUID = 'Druid',
-	HUNTER = 'Hunter',
-	MAGE = 'Mage',
-	MONK = 'Monk',
-	PALADIN = 'Paladin',
-	PRIEST = 'Priest',
-	ROGUE = 'Rogue',
-	SHAMAN = 'Shaman',
-	WARLOCK = 'Warlock',
-	WARRIOR = 'Warrior',
-	EVOKER = 'Evoker'
-}
-
-local EnglishSpecName = {
-	[250] = 'Blood',
-	[251] = 'Frost',
-	[252] = 'Unholy',
-	[102] = 'Balance',
-	[103] = 'Feral',
-	[104] = 'Guardian',
-	[105] = 'Restoration',
-	[253] = 'Beast Mastery',
-	[254] = 'Marksmanship',
-	[255] = 'Survival',
-	[62] = 'Arcane',
-	[63] = 'Fire',
-	[64] = 'Frost',
-	[268] = 'Brewmaster',
-	[270] = 'Mistweaver',
-	[269] = 'Windwalker',
-	[65] = 'Holy',
-	[66] = 'Protection',
-	[70] = 'Retribution',
-	[256] = 'Discipline',
-	[257] = 'Holy',
-	[258] = 'Shadow',
-	[259] = 'Assasination',
-	[260] = 'Combat',
-	[261] = 'Sublety',
-	[262] = 'Elemental',
-	[263] = 'Enhancement',
-	[264] = 'Restoration',
-	[265] = 'Affliction',
-	[266] = 'Demonology',
-	[267] = 'Destruction',
-	[71] = 'Arms',
-	[72] = 'Fury',
-	[73] = 'Protection',
-	[577] = 'Havoc',
-	[581] = 'Vengeance',
-	[1467] = 'Devastation',
-	[1468] = 'Preservation',
-}
-
 local function GetSpecName()
-	return EnglishSpecName[GetSpecializationInfo(GetSpecialization())]
+	return E.SpecName[E.myspecID]
 end
 
 function E:CreateStatusContent(num, width, parent, anchorTo, content)
@@ -217,7 +160,7 @@ function E:CreateStatusFrame()
 	--Sections
 	StatusFrame.Section1 = E:CreateStatusSection(300, 125, nil, 30, StatusFrame, 'TOP', StatusFrame, 'TOP', -30)
 	StatusFrame.Section2 = E:CreateStatusSection(300, 130, nil, 30, StatusFrame, 'TOP', StatusFrame.Section1, 'BOTTOM', 0)
-	StatusFrame.Section3 = E:CreateStatusSection(300, E.Retail and 185 or 165, nil, 30, StatusFrame, 'TOP', StatusFrame.Section2, 'BOTTOM', 0)
+	StatusFrame.Section3 = E:CreateStatusSection(300, E.Wrath and 165 or 185, nil, 30, StatusFrame, 'TOP', StatusFrame.Section2, 'BOTTOM', 0)
 
 	PluginFrame.SectionP = E:CreateStatusSection(280, nil, nil, 30, PluginFrame, 'TOP', PluginFrame, 'TOP', -10)
 
@@ -233,7 +176,7 @@ function E:CreateStatusFrame()
 	StatusFrame.Section2.Content.Line2.Text:SetFormattedText('Client Language: |cff4beb2c%s|r', E.locale)
 	StatusFrame.Section3.Content.Line1.Text:SetFormattedText('Faction: |cff4beb2c%s|r', E.myfaction)
 	StatusFrame.Section3.Content.Line2.Text:SetFormattedText('Race: |cff4beb2c%s|r', E.myrace)
-	StatusFrame.Section3.Content.Line3.Text:SetFormattedText('Class: |cff4beb2c%s|r', EnglishClassName[E.myclass])
+	StatusFrame.Section3.Content.Line3.Text:SetFormattedText('Class: |cff4beb2c%s|r', E.ClassName[E.myclass])
 
 	return StatusFrame
 end
@@ -308,6 +251,8 @@ function E:UpdateStatusFrame()
 
 	if E.Retail then
 		Section3.Content.Line6.Text:SetFormattedText('Specialization: |cff4beb2c%s|r', GetSpecName() or UNKNOWN)
+	elseif E.Classic then
+		Section3.Content.Line6.Text:SetFormattedText('Hardcore: |cff4beb2c%s|r', E.ClassicHC and 'Yes' or 'No')
 	end
 
 	StatusFrame.TitleLogoFrame.LogoTop:SetVertexColor(unpack(E.media.rgbvaluecolor))

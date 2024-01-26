@@ -92,7 +92,7 @@ local function ReskinMissionButton(button)
 		end
 		if rareOverlay then
 			rareOverlay:SetDrawLayer('BACKGROUND')
-			rareOverlay:SetTexture('Interface\\ChatFrame\\ChatFrameBackground')
+			rareOverlay:SetTexture([[Interface\ChatFrame\ChatFrameBackground]])
 			rareOverlay:SetAllPoints()
 			rareOverlay:SetVertexColor(.098, .537, .969, .2)
 		end
@@ -105,8 +105,7 @@ local function ReskinMissionButton(button)
 end
 
 local function ReskinMissionList(frame)
-	for i = 1, frame.ScrollTarget:GetNumChildren() do
-		local button = select(i, frame.ScrollTarget:GetChildren())
+	for _, button in next, { frame.ScrollTarget:GetChildren() } do
 		ReskinMissionButton(button)
 	end
 end

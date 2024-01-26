@@ -2,16 +2,16 @@ local E, L, V, P, G = unpack(ElvUI)
 local DT = E:GetModule('DataTexts')
 local AB = E:GetModule('ActionBars')
 
-local _G = _G
 local type, pairs, select, tonumber = type, pairs, select, tonumber
 local lower, wipe, next, print = strlower, wipe, next, print
 
-local EnableAddOn = EnableAddOn
-local GetAddOnInfo = GetAddOnInfo
-local GetNumAddOns = GetNumAddOns
-local DisableAddOn = DisableAddOn
 local ReloadUI = ReloadUI
-local SetCVar = SetCVar
+
+local DisableAddOn = (C_AddOns and C_AddOns.DisableAddOn) or DisableAddOn
+local EnableAddOn = (C_AddOns and C_AddOns.EnableAddOn) or EnableAddOn
+local GetAddOnInfo = (C_AddOns and C_AddOns.GetAddOnInfo) or GetAddOnInfo
+local GetNumAddOns = (C_AddOns and C_AddOns.GetNumAddOns) or GetNumAddOns
+
 -- GLOBALS: ElvUIGrid, ElvDB
 
 function E:Grid(msg)
@@ -44,12 +44,12 @@ function E:LuaError(msg)
 			end
 		end
 
-		SetCVar('scriptErrors', 1)
+		E:SetCVar('scriptErrors', 1)
 		ReloadUI()
 	elseif switch == 'off' or switch == '0' then
 		if switch == 'off' then
-			SetCVar('scriptProfile', 0)
-			SetCVar('scriptErrors', 0)
+			E:SetCVar('scriptProfile', 0)
+			E:SetCVar('scriptErrors', 0)
 			E:Print('Lua errors off.')
 
 			if E:IsAddOnEnabled('ElvUI_CPU') then
@@ -67,21 +67,6 @@ function E:LuaError(msg)
 		end
 	else
 		E:Print('/edebug on - /edebug off')
-	end
-end
-
-local function OnCallback(command)
-	_G.MacroEditBox:GetScript('OnEvent')(_G.MacroEditBox, 'EXECUTE_CHAT_LINE', command)
-end
-
-function E:DelayScriptCall(msg)
-	local secs, command = msg:match('^(%S+)%s+(.*)$')
-	secs = tonumber(secs)
-	if not secs or (#command == 0) then
-		self:Print('usage: /in <seconds> <command>')
-		self:Print('example: /in 1.5 /say hi')
-	else
-		E:Delay(secs, OnCallback, command)
 	end
 end
 
@@ -229,7 +214,6 @@ function E:LoadCommands()
 		self:RegisterChatCommand('kb', AB.ActivateBindMode)
 	end
 
-	self:RegisterChatCommand('in', 'DelayScriptCall')
 	self:RegisterChatCommand('ec', 'ToggleOptions')
 	self:RegisterChatCommand('elvui', 'ToggleOptions')
 

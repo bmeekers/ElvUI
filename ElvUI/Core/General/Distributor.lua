@@ -90,6 +90,11 @@ D.GeneratedKeys = {
 		datatexts = {
 			panels = true,
 		},
+		chat = {
+			channelAlerts = {
+				CHANNEL = true
+			}
+		},
 		unitframe = {
 			units = {} -- required for the scope below for customTexts
 		}
@@ -409,7 +414,7 @@ local function GetProfileExport(profileType, exportFormat)
 end
 
 function D:CreateProfileExport(dataString, profileType, profileKey)
-	return (profileType == 'profile' and format('%s::%s::%s', dataString, profileType, profileKey)) or format('%s::%s', dataString, profileType)
+	return (profileType == 'profile' and format('%s::%s::%s', dataString, profileType, profileKey)) or (profileType and format('%s::%s', dataString, profileType))
 end
 
 function D:GetImportStringType(dataString)

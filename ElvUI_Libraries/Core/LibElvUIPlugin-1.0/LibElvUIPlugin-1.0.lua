@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibElvUIPlugin-1.0", 42
+local MAJOR, MINOR = "LibElvUIPlugin-1.0", 43
 local lib = _G.LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
 -- GLOBALS: ElvUI
@@ -36,13 +36,19 @@ local format, wipe, type, gmatch, gsub, ceil, strfind = format, wipe, type, gmat
 
 local geterrorhandler = geterrorhandler
 local hooksecurefunc = hooksecurefunc
-local GetAddOnMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+
 local GetNumGroupMembers = GetNumGroupMembers
-local GetLocale, IsInGuild = GetLocale, IsInGuild
-local CreateFrame, IsAddOnLoaded = CreateFrame, IsAddOnLoaded
-local IsInRaid, IsInGroup = IsInRaid, IsInGroup
+local CreateFrame = CreateFrame
+local GetLocale = GetLocale
+local IsInGroup = IsInGroup
+local IsInGuild = IsInGuild
+local IsInRaid = IsInRaid
+
+local IsAddOnLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+local GetAddOnMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 local C_ChatInfo_RegisterAddonMessagePrefix = C_ChatInfo.RegisterAddonMessagePrefix
 local C_ChatInfo_SendAddonMessage = C_ChatInfo.SendAddonMessage
+
 local LE_PARTY_CATEGORY_HOME = LE_PARTY_CATEGORY_HOME
 local LE_PARTY_CATEGORY_INSTANCE = LE_PARTY_CATEGORY_INSTANCE
 local UNKNOWN = UNKNOWN
@@ -52,7 +58,7 @@ lib.plugins = {}
 lib.groupSize = 0
 lib.index = 0
 
-local MSG_OUTDATED = "Your version of %s %s is out of date (latest is version %s). You can download the latest version from http://www.tukui.org"
+local MSG_OUTDATED = "Your version of %s %s is out of date (latest is version %s). You can download the latest version from http://tukui.org"
 local HDR_INFORMATION = "LibElvUIPlugin-1.0.%d - Plugins Loaded  (Green means you have current version, Red means out of date)"
 local INFO_BY = "by"
 local INFO_VERSION = "Version:"
@@ -61,28 +67,28 @@ local LIBRARY = "Library"
 
 local locale = GetLocale()
 if locale == "deDE" then
-	MSG_OUTDATED = "Deine Version von %s %s ist veraltet (akutelle Version ist %s). Du kannst die aktuelle Version von http://www.tukui.org herunterrladen."
+	MSG_OUTDATED = "Deine Version von %s %s ist veraltet (akutelle Version ist %s). Du kannst die aktuelle Version von http://tukui.org herunterrladen."
 	HDR_INFORMATION = "LibElvUIPlugin-1.0.%d - Plugins geladen (Grün bedeutet du hast die aktuelle Version, Rot bedeutet es ist veraltet)"
 	INFO_BY = "von"
 	INFO_VERSION = "Version:"
 	INFO_NEW = "Neuste:"
 	LIBRARY = "Bibliothek"
 elseif locale == "ruRU" then
-	MSG_OUTDATED = "Ваша версия %s %s устарела (последняя версия %s). Вы можете скачать последнюю версию на http://www.tukui.org"
+	MSG_OUTDATED = "Ваша версия %s %s устарела (последняя версия %s). Вы можете скачать последнюю версию на http://tukui.org"
 	HDR_INFORMATION = "LibElvUIPlugin-1.0.%d - загруженные плагины (зеленый означает, что у вас последняя версия, красный - устаревшая)"
 	INFO_BY = "от"
 	INFO_VERSION = "Версия:"
 	INFO_NEW = "Последняя:"
 	LIBRARY = "Библиотека"
 elseif locale == "zhCN" then
-	MSG_OUTDATED = "你的 %s %s 版本已经过期 (最新版本是 %s)。你可以从 http://www.tukui.org 下载最新版本"
+	MSG_OUTDATED = "你的 %s %s 版本已经过期 (最新版本是 %s)。你可以从 http://tukui.org 下载最新版本"
 	HDR_INFORMATION = "LibElvUIPlugin-1.0.%d - 载入的插件 (绿色表示拥有当前版本, 红色表示版本已经过期)"
 	INFO_BY = "作者"
 	INFO_VERSION = "版本:"
 	INFO_NEW = "最新:"
 	LIBRARY = "库"
 elseif locale == "zhTW" then
-	MSG_OUTDATED = "你的 %s %s 版本已經過期 (最新版本為 %s)。你可以透過 http://www.tukui.org 下載最新的版本"
+	MSG_OUTDATED = "你的 %s %s 版本已經過期 (最新版本為 %s)。你可以透過 http://tukui.org 下載最新的版本"
 	HDR_INFORMATION = "LibElvUIPlugin-1.0.%d - 載入的插件 (綠色表示擁有當前版本, 紅色表示版本已經過期)"
 	INFO_BY = "作者"
 	INFO_VERSION = "版本:"

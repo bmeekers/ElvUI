@@ -3,6 +3,7 @@ local S = E:GetModule('Skins')
 local TT = E:GetModule('Tooltip')
 
 local _G = _G
+local strfind = strfind
 local next, unpack = next, unpack
 local ipairs, pairs = ipairs, pairs
 
@@ -170,7 +171,7 @@ local function JournalScrollButtons(frame)
 
 					bu.favorite:SetTexture([[Interface\COMMON\FavoritesIcon]])
 					bu.favorite:Point('TOPLEFT', bu.DragButton, 'TOPLEFT' , -8, 8)
-					bu.favorite:Size(32, 32)
+					bu.favorite:Size(32)
 
 					hooksecurefunc(bu.name, 'SetFontObject', mountNameColor)
 					hooksecurefunc(bu.background, 'SetVertexColor', mountNameColor)
@@ -206,8 +207,7 @@ local function SkinMountFrame()
 	S:HandleButton(_G.MountJournalMountButton)
 	S:HandleEditBox(_G.MountJournalSearchBox)
 	S:HandleTrimScrollBar(_G.MountJournal.ScrollBar)
-	S:HandleRotateButton(MountJournal.MountDisplay.ModelScene.RotateLeftButton)
-	S:HandleRotateButton(MountJournal.MountDisplay.ModelScene.RotateRightButton)
+	S:HandleModelSceneControlButtons(_G.MountJournal.MountDisplay.ModelScene.ControlFrame)
 
 	MountJournal.BottomLeftInset:StripTextures()
 	MountJournal.BottomLeftInset:SetTemplate('Transparent')
@@ -451,7 +451,7 @@ local function SkinHeirloomFrame()
 		for i=1, #HeirloomsJournal.heirloomHeaderFrames do
 			local header = HeirloomsJournal.heirloomHeaderFrames[i]
 			header:StripTextures()
-			header.text:FontTemplate(nil, 15, '')
+			header.text:FontTemplate(nil, 15, 'SHADOW')
 			header.text:SetTextColor(0.9, 0.9, 0.9)
 		end
 	end)
@@ -466,6 +466,10 @@ local function SkinTransmogFrames()
 	WardrobeCollectionFrame.progressBar:CreateBackdrop()
 	WardrobeCollectionFrame.progressBar:SetStatusBarTexture(E.media.normTex)
 	E:RegisterStatusBar(WardrobeCollectionFrame.progressBar)
+
+	if E.global.general.disableTutorialButtons then
+		WardrobeCollectionFrame.InfoButton:Kill()
+	end
 
 	S:HandleEditBox(_G.WardrobeCollectionFrameSearchBox)
 	_G.WardrobeCollectionFrameSearchBox:SetFrameLevel(5)
@@ -497,8 +501,8 @@ local function SkinTransmogFrames()
 
 				for _, region in next, { Model:GetRegions() } do
 					if region:IsObjectType('Texture') then -- check for hover glow
-						local texture = region:GetTexture()
-						if texture == 1116940 or texture == 1569530 then -- transmogrify.blp (items:1116940 or sets:1569530)
+						local texture, regionName = region:GetTexture(), region:GetDebugName() -- find transmogrify.blp (sets:1569530 or items:1116940)
+						if texture == 1569530 or (texture == 1116940 and not strfind(regionName, 'SlotInvalidTexture') and not strfind(regionName, 'DisabledOverlay')) then
 							region:SetColorTexture(1, 1, 1, 0.3)
 							region:SetBlendMode('ADD')
 							region:SetAllPoints(Model)
@@ -559,7 +563,7 @@ local function SkinTransmogFrames()
 		for _, child in next, { button.ScrollTarget:GetChildren() } do
 			if not child.IsSkinned then
 				child.Background:Hide()
-				child.HighlightTexture:SetTexture('')
+				child.HighlightTexture:SetTexture(E.ClearTexture)
 				child.Icon:SetSize(42, 42)
 				S:HandleIcon(child.Icon)
 				child.IconCover:SetOutside(child.Icon)
@@ -648,6 +652,7 @@ local function SkinTransmogFrames()
 	S:HandleButton(WardrobeTransmogFrame.ApplyButton)
 	S:HandleButton(WardrobeTransmogFrame.ModelScene.ClearAllPendingButton)
 	S:HandleCheckBox(WardrobeTransmogFrame.ToggleSecondaryAppearanceCheckbox)
+	S:HandleModelSceneControlButtons(WardrobeTransmogFrame.ModelScene.ControlFrame)
 
 	WardrobeCollectionFrame.ItemsCollectionFrame:StripTextures()
 	WardrobeCollectionFrame.ItemsCollectionFrame:SetTemplate('Transparent')

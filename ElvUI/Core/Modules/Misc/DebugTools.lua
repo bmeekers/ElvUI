@@ -4,10 +4,14 @@ local D = E:GetModule('DebugTools')
 local _G = _G
 local format = format
 local hooksecurefunc = hooksecurefunc
+
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
-local GetCVarBool = GetCVarBool
+local UIParent = UIParent
+
 local StaticPopup_Hide = StaticPopup_Hide
+
+local GetCVarBool = C_CVar.GetCVarBool
 
 local BUTTON_WIDTH = 75
 local BUTTON_HEIGHT = 23
@@ -89,7 +93,7 @@ function D:ScriptErrorsFrame_OnError(_, _, keepHidden)
 end
 
 function D:PLAYER_REGEN_ENABLED()
-	_G.ScriptErrorsFrame:SetParent(_G.UIParent)
+	_G.ScriptErrorsFrame:SetParent(UIParent)
 	D.MessagePrinted = nil
 end
 

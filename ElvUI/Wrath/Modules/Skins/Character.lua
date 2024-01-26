@@ -7,19 +7,15 @@ local unpack = unpack
 local ipairs, pairs = ipairs, pairs
 
 local HasPetUI = HasPetUI
+local hooksecurefunc = hooksecurefunc
 local GetPetHappiness = GetPetHappiness
 local GetSkillLineInfo = GetSkillLineInfo
-local GetInventoryItemQuality = GetInventoryItemQuality
 local GetItemQualityColor = GetItemQualityColor
-local UnitFactionGroup = UnitFactionGroup
-local GetNumFactions = GetNumFactions
-local hooksecurefunc = hooksecurefunc
+local GetInventoryItemQuality = GetInventoryItemQuality
 
-local MAX_ARENA_TEAMS = MAX_ARENA_TEAMS
-local NUM_COMPANIONS_PER_PAGE = NUM_COMPANIONS_PER_PAGE
 local NUM_FACTIONS_DISPLAYED = NUM_FACTIONS_DISPLAYED
+local NUM_COMPANIONS_PER_PAGE = NUM_COMPANIONS_PER_PAGE
 local CHARACTERFRAME_SUBFRAMES = CHARACTERFRAME_SUBFRAMES
-local FauxScrollFrame_GetOffset = FauxScrollFrame_GetOffset
 
 local HONOR_CURRENCY = Constants.CurrencyConsts.CLASSIC_HONOR_CURRENCY_ID
 
@@ -30,6 +26,24 @@ local ResistanceCoords = {
 	{ 0.21875, 0.8125, 0.36328125, 0.4375},		--Frost
 	{ 0.21875, 0.8125, 0.4765625, 0.55078125},	--Shadow
 }
+
+local function HandleTabs()
+	_G.PetPaperDollFrameTab1:ClearAllPoints()
+	_G.PetPaperDollFrameTab1:Point('TOPLEFT', _G.PetPaperDollFrameCompanionFrame, 88, -40)
+
+	local lastTab
+	for index, tab in next, { _G.CharacterFrameTab1, HasPetUI() and _G.CharacterFrameTab2 or nil, _G.CharacterFrameTab3, _G.CharacterFrameTab4, _G.CharacterFrameTab5 } do
+		tab:ClearAllPoints()
+
+		if index == 1 then
+			tab:Point('TOPLEFT', _G.CharacterFrame, 'BOTTOMLEFT', 1, 76)
+		else
+			tab:Point('TOPLEFT', lastTab, 'TOPRIGHT', -19, 0)
+		end
+
+		lastTab = tab
+	end
+end
 
 local function Update_GearManagerDialogPopup()
 	_G.GearManagerDialogPopup:ClearAllPoints()
@@ -87,74 +101,67 @@ local function UpdateCurrencySkins()
 	local TokenFrameContainer = _G.TokenFrameContainer
 	if not TokenFrameContainer.buttons then return end
 
-	local buttons = TokenFrameContainer.buttons
-	local numButtons = #buttons
+	for _, button in next, TokenFrameContainer.buttons do
+		if button.highlight then button.highlight:Kill() end
+		if button.categoryLeft then button.categoryLeft:Kill() end
+		if button.categoryRight then button.categoryRight:Kill() end
+		if button.categoryMiddle then button.categoryMiddle:Kill() end
 
-	for i = 1, numButtons do
-		local button = buttons[i]
+		if not button.backdrop then
+			button:CreateBackdrop(nil, nil, nil, true)
+		end
 
-		if button then
-			if button.highlight then button.highlight:Kill() end
-			if button.categoryLeft then button.categoryLeft:Kill() end
-			if button.categoryRight then button.categoryRight:Kill() end
-			if button.categoryMiddle then button.categoryMiddle:Kill() end
-
-			if not button.backdrop then
-				button:CreateBackdrop(nil, nil, nil, true)
-			end
-
-			if button.icon then
-				if button.itemID == HONOR_CURRENCY and UnitFactionGroup('player') then
-					button.icon:SetTexCoord(0.06325, 0.59375, 0.03125, 0.57375)
-				else
-					button.icon:SetTexCoord(unpack(E.TexCoords))
-				end
-
-				button.icon:Size(17, 17)
-
-				button.backdrop:SetOutside(button.icon, 1, 1)
-				button.backdrop:Show()
+		if button.icon then
+			if button.itemID == HONOR_CURRENCY and E.myfaction then
+				button.icon:SetTexCoord(0.06325, 0.59375, 0.03125, 0.57375)
 			else
-				button.backdrop:Hide()
+				button.icon:SetTexCoord(unpack(E.TexCoords))
 			end
 
-			if button.expandIcon then
-				if not button.highlightTexture then
-					button.highlightTexture = button:CreateTexture(button:GetName()..'HighlightTexture', 'HIGHLIGHT')
-					button.highlightTexture:SetTexture([[Interface\Buttons\UI-PlusButton-Hilight]])
-					button.highlightTexture:SetBlendMode('ADD')
-					button.highlightTexture:SetInside(button.expandIcon)
+			button.icon:Size(17)
 
-					-- these two only need to be called once
-					-- adding them here will prevent additional calls
-					button.expandIcon:ClearAllPoints()
-					button.expandIcon:Point('LEFT', 4, 0)
-					button.expandIcon:Size(15, 15)
+			button.backdrop:SetOutside(button.icon, 1, 1)
+			button.backdrop:Show()
+		else
+			button.backdrop:Hide()
+		end
+
+		if button.expandIcon then
+			if not button.highlightTexture then
+				button.highlightTexture = button:CreateTexture(button:GetName()..'HighlightTexture', 'HIGHLIGHT')
+				button.highlightTexture:SetTexture([[Interface\Buttons\UI-PlusButton-Hilight]])
+				button.highlightTexture:SetBlendMode('ADD')
+				button.highlightTexture:SetInside(button.expandIcon)
+
+				-- these two only need to be called once
+				-- adding them here will prevent additional calls
+				button.expandIcon:ClearAllPoints()
+				button.expandIcon:Point('LEFT', 4, 0)
+				button.expandIcon:Size(15)
+			end
+
+			if button.isHeader then
+				button.backdrop:Hide()
+
+				-- TODO: Wrath Fix some quirks for the header point keeps changing after you click the expandIcon button.
+				for _, region in next, { button:GetRegions() } do
+					if region:IsObjectType('FontString') and region:GetText() then
+						region:ClearAllPoints()
+						region:Point('LEFT', 25, 0)
+					end
 				end
 
-				if button.isHeader then
-					button.backdrop:Hide()
-
-					-- TODO: Wrath Fix some quirks for the header point keeps changing after you click the expandIcon button.
-					for _, region in next, { button:GetRegions() } do
-						if region:IsObjectType('FontString') and region:GetText() then
-							region:ClearAllPoints()
-							region:Point('LEFT', 25, 0)
-						end
-					end
-
-					if button.isExpanded then
-						button.expandIcon:SetTexture(E.Media.Textures.MinusButton)
-						button.expandIcon:SetTexCoord(0,1,0,1)
-					else
-						button.expandIcon:SetTexture(E.Media.Textures.PlusButton)
-						button.expandIcon:SetTexCoord(0,1,0,1)
-					end
-
-					button.highlightTexture:Show()
+				if button.isExpanded then
+					button.expandIcon:SetTexture(E.Media.Textures.MinusButton)
+					button.expandIcon:SetTexCoord(0,1,0,1)
 				else
-					button.highlightTexture:Hide()
+					button.expandIcon:SetTexture(E.Media.Textures.PlusButton)
+					button.expandIcon:SetTexCoord(0,1,0,1)
 				end
+
+				button.highlightTexture:Show()
+			else
+				button.highlightTexture:Hide()
 			end
 		end
 	end
@@ -178,6 +185,10 @@ function S:CharacterFrame()
 		S:HandleTab(_G['CharacterFrameTab'..i])
 	end
 
+	-- Reposition Tabs
+	hooksecurefunc('PetPaperDollFrame_UpdateTabs', HandleTabs)
+	HandleTabs()
+
 	-- HandleTab looks weird
 	for i = 1, 3 do
 		local tab = _G['PetPaperDollFrameTab'..i]
@@ -185,11 +196,6 @@ function S:CharacterFrame()
 		tab:Height(24)
 		S:HandleButton(tab)
 	end
-
-	hooksecurefunc('PetPaperDollFrame_UpdateTabs', function()
-		_G.PetPaperDollFrameTab1:ClearAllPoints()
-		_G.PetPaperDollFrameTab1:Point('TOPLEFT', _G.PetPaperDollFrameCompanionFrame, 'TOPLEFT', 88, -40)
-	end)
 
 	_G.PaperDollFrame:StripTextures()
 
@@ -391,6 +397,7 @@ function S:CharacterFrame()
 	for i = 1, NUM_FACTIONS_DISPLAYED do
 		local factionBar = _G['ReputationBar'..i]
 		local factionStatusBar = _G['ReputationBar'..i..'ReputationBar']
+		local factionBarButton = _G['ReputationBar'..i..'ExpandOrCollapseButton']
 		local factionName = _G['ReputationBar'..i..'FactionName']
 
 		factionBar:StripTextures()
@@ -399,30 +406,13 @@ function S:CharacterFrame()
 		factionStatusBar:SetStatusBarTexture(E.media.normTex)
 		factionStatusBar:Size(108, 13)
 
+		S:HandleCollapseTexture(factionBarButton, nil, true)
 		E:RegisterStatusBar(factionStatusBar)
 
 		factionName:Width(140)
 		factionName:Point('LEFT', factionBar, 'LEFT', -150, 0)
 		factionName.SetWidth = E.noop
 	end
-
-	hooksecurefunc('ReputationFrame_Update', function()
-		local numFactions = GetNumFactions()
-		local factionIndex, factionBarButton
-		local factionOffset = FauxScrollFrame_GetOffset(_G.ReputationListScrollFrame)
-
-		for i = 1, NUM_FACTIONS_DISPLAYED, 1 do
-			factionBarButton = _G['ReputationBar'..i..'ExpandOrCollapseButton']
-			factionIndex = factionOffset + i
-			if factionIndex <= numFactions then
-				if factionBarButton.isCollapsed then
-					factionBarButton:SetNormalTexture(E.Media.Textures.PlusButton)
-				else
-					factionBarButton:SetNormalTexture(E.Media.Textures.MinusButton)
-				end
-			end
-		end
-	end)
 
 	_G.ReputationListScrollFrame:StripTextures()
 	S:HandleScrollBar(_G.ReputationListScrollFrameScrollBar)
@@ -497,56 +487,6 @@ function S:CharacterFrame()
 
 	S:HandleCloseButton(_G.SkillDetailStatusBarUnlearnButton)
 	_G.SkillDetailStatusBarUnlearnButton:Point('LEFT', _G.SkillDetailStatusBarBorder, 'RIGHT', -6, 1)
-
-	-- Honor/Arena/PvP Tab
-	local PVPFrame = _G.PVPFrame
-	S:HandleFrame(PVPFrame, true, nil, 11, -12, -32, 76)
-	S:HandleCloseButton(_G.PVPParentFrameCloseButton)
-	_G.PVPParentFrameCloseButton:Point('TOPRIGHT', -26, -5)
-
-	for i = 1, MAX_ARENA_TEAMS do
-		local pvpTeam = _G['PVPTeam'..i]
-
-		pvpTeam:StripTextures()
-		pvpTeam:CreateBackdrop()
-		pvpTeam.backdrop:Point('TOPLEFT', 9, -4)
-		pvpTeam.backdrop:Point('BOTTOMRIGHT', -24, 3)
-
-		pvpTeam:HookScript('OnEnter', S.SetModifiedBackdrop)
-		pvpTeam:HookScript('OnLeave', S.SetOriginalBackdrop)
-
-		_G['PVPTeam'..i..'Highlight']:Kill()
-	end
-
-	local PVPTeamDetails = _G.PVPTeamDetails
-	PVPTeamDetails:StripTextures()
-	PVPTeamDetails:SetTemplate('Transparent')
-	PVPTeamDetails:Point('TOPLEFT', PVPFrame, 'TOPRIGHT', -30, -12)
-
-	local PVPFrameToggleButton = _G.PVPFrameToggleButton
-	S:HandleNextPrevButton(PVPFrameToggleButton)
-	PVPFrameToggleButton:Point('BOTTOMRIGHT', PVPFrame, 'BOTTOMRIGHT', -48, 81)
-	PVPFrameToggleButton:Size(14)
-
-	for i = 1, 5 do
-		local header = _G['PVPTeamDetailsFrameColumnHeader'..i]
-		header:StripTextures()
-		header:StyleButton()
-	end
-
-	for i = 1, 10 do
-		local button = _G['PVPTeamDetailsButton'..i]
-		button:Width(335)
-		S:HandleButtonHighlight(button)
-	end
-
-	-- BG Queue Tabs
-	S:HandleTab(_G.PVPParentFrameTab1)
-	S:HandleTab(_G.PVPParentFrameTab2)
-
-	S:HandleButton(_G.PVPTeamDetailsAddTeamMember)
-	S:HandleNextPrevButton(_G.PVPTeamDetailsToggleButton)
-	S:HandleCloseButton(_G.PVPTeamDetailsCloseButton)
 
 	-- TokenFrame (Currency Tab)
 	_G.TokenFrame:StripTextures()

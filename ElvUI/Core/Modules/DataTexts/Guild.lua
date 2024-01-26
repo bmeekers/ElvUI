@@ -17,17 +17,16 @@ local GetQuestDifficultyColor = GetQuestDifficultyColor
 local C_GuildInfo_GuildRoster = C_GuildInfo.GuildRoster
 local IsInGuild = IsInGuild
 local IsShiftKeyDown = IsShiftKeyDown
-local LoadAddOn = LoadAddOn
 local SetItemRef = SetItemRef
 local ToggleGuildFrame = ToggleGuildFrame
 local ToggleFriendsFrame = ToggleFriendsFrame
 local UnitInParty = UnitInParty
 local UnitInRaid = UnitInRaid
-local InCombatLockdown = InCombatLockdown
 local IsAltKeyDown = IsAltKeyDown
 
 local InviteUnit = C_PartyInfo.InviteUnit or InviteUnit
 local C_PartyInfo_RequestInviteFromUnit = C_PartyInfo.RequestInviteFromUnit
+local LoadAddOn = (C_AddOns and C_AddOns.LoadAddOn) or LoadAddOn
 
 local COMBAT_FACTION_CHANGE = COMBAT_FACTION_CHANGE
 local REMOTE_CHAT = REMOTE_CHAT
@@ -216,12 +215,12 @@ local function Click(self, btn)
 
 		E:SetEasyMenuAnchor(E.EasyMenu, self)
 		EasyMenu(menuList, E.EasyMenu, nil, nil, nil, 'MENU')
-	elseif InCombatLockdown() then
-		_G.UIErrorsFrame:AddMessage(E.InfoColor.._G.ERR_NOT_IN_COMBAT)
-	elseif E.Retail then
-		ToggleGuildFrame()
-	else
-		ToggleFriendsFrame(3)
+	elseif not E:AlertCombat() then
+		if E.Retail then
+			ToggleGuildFrame()
+		else
+			ToggleFriendsFrame(3)
+		end
 	end
 end
 

@@ -5,13 +5,12 @@ local ACD = E.Libs.AceConfigDialog
 local ACH = E.Libs.ACH
 
 local _G = _G
-local max, strfind, wipe = max, strfind, wipe
+local max, wipe, strfind = max, wipe, strfind
 local pairs, type, strsplit = pairs, type, strsplit
 local next, tonumber, format = next, tonumber, format
 
-local IsAddOnLoaded = IsAddOnLoaded
-local GetCVarBool = GetCVarBool
-local SetCVar = SetCVar
+local IsAddOnLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+local GetCVarBool = C_CVar.GetCVarBool
 
 local function GetAddOnStatus(index, locale, name)
 	local status = IsAddOnLoaded(name) and format('|cff33ff33%s|r', L["Enabled"]) or format('|cffff3333%s|r', L["Disabled"])
@@ -168,7 +167,7 @@ local function GetUnitSettings(unit, name)
 	group.args.buffsGroup.args.duration.args.cooldownShortcut = ACH:Execute(L["Cooldowns"], nil, 1, function() ACD:SelectGroup('ElvUI', 'cooldown', 'nameplates') end)
 	group.args.buffsGroup.args.duration.args.durationPosition = ACH:Select(L["Position"], nil, 2, C.Values.AllPoints)
 
-	group.args.buffsGroup.args.filtersGroup = ACH:Group(L["FILTERS"], nil, 30)
+	group.args.buffsGroup.args.filtersGroup = ACH:Group(L["Filters"], nil, 30)
 	group.args.buffsGroup.args.filtersGroup.inline = true
 	group.args.buffsGroup.args.filtersGroup.args.minDuration = ACH:Range(L["Minimum Duration"], L["Don't display auras that are shorter than this duration (in seconds). Set to zero to disable."], 1, { min = 0, max = 10800, step = 1 })
 	group.args.buffsGroup.args.filtersGroup.args.maxDuration = ACH:Range(L["Maximum Duration"], L["Don't display auras that are longer than this duration (in seconds). Set to zero to disable."], 1, { min = 0, max = 10800, step = 1 })
@@ -222,7 +221,7 @@ local function GetUnitSettings(unit, name)
 	group.args.debuffsGroup.args.duration.args.cooldownShortcut = ACH:Execute(L["Cooldowns"], nil, 1, function() ACD:SelectGroup('ElvUI', 'cooldown', 'nameplates') end)
 	group.args.debuffsGroup.args.duration.args.durationPosition = ACH:Select(L["Position"], nil, 2, C.Values.AllPoints)
 
-	group.args.debuffsGroup.args.filtersGroup = ACH:Group(L["FILTERS"], nil, 30)
+	group.args.debuffsGroup.args.filtersGroup = ACH:Group(L["Filters"], nil, 30)
 	group.args.debuffsGroup.args.filtersGroup.inline = true
 	group.args.debuffsGroup.args.filtersGroup.args.minDuration = ACH:Range(L["Minimum Duration"], L["Don't display auras that are shorter than this duration (in seconds). Set to zero to disable."], 1, { min = 0, max = 10800, step = 1 })
 	group.args.debuffsGroup.args.filtersGroup.args.maxDuration = ACH:Range(L["Maximum Duration"], L["Don't display auras that are longer than this duration (in seconds). Set to zero to disable."], 1, { min = 0, max = 10800, step = 1 })
@@ -243,13 +242,13 @@ local function GetUnitSettings(unit, name)
 	group.args.debuffsGroup.args.filtersGroup.args.filterPriority.stateSwitchOnClick = function() C.SetFilterPriority(E.db.nameplates.units, unit, 'debuffs', carryFilterFrom, nil, nil, true) end
 	group.args.debuffsGroup.args.filtersGroup.args.spacer1 = ACH:Description(L["Use drag and drop to rearrange filter priority or right click to remove a filter."] ..'\n'..L["Use Shift+LeftClick to toggle between friendly or enemy or normal state. Normal state will allow the filter to be checked on all units. Friendly state is for friendly units only and enemy state is for enemy units."], 9)
 
-	group.args.privateAuras = ACH:Group(E.NewSign..L["Private Auras"], nil, 35, nil, function(info) return E.db.nameplates.units[unit].privateAuras[info[#info]] end, function(info, value) E.db.nameplates.units[unit].privateAuras[info[#info]] = value NP:ConfigureAll() end, nil, not E.Retail)
+	group.args.privateAuras = ACH:Group(L["Private Auras"], nil, 35, nil, function(info) return E.db.nameplates.units[unit].privateAuras[info[#info]] end, function(info, value) E.db.nameplates.units[unit].privateAuras[info[#info]] = value NP:ConfigureAll() end, nil, not E.Retail)
 	group.args.privateAuras.args.enable = ACH:Toggle(L["Enable"], nil, 1)
 	group.args.privateAuras.args.countdownFrame = ACH:Toggle(L["Cooldown Spiral"], nil, 3)
 	group.args.privateAuras.args.countdownNumbers = ACH:Toggle(L["Cooldown Numbers"], nil, 4)
 
 	group.args.privateAuras.args.icon = ACH:Group(L["Icon"], nil, 10, nil, function(info) return E.db.nameplates.units[unit].privateAuras.icon[info[#info]] end, function(info, value) E.db.nameplates.units[unit].privateAuras.icon[info[#info]] = value NP:ConfigureAll() end)
-	group.args.privateAuras.args.icon.args.point = ACH:Select(L["Direction"], nil, 1, C.Values.SidePositions)
+	group.args.privateAuras.args.icon.args.point = ACH:Select(L["Direction"], nil, 1, C.Values.EdgePositions)
 	group.args.privateAuras.args.icon.args.offset = ACH:Range(L["Offset"], nil, 2, { min = -4, max = 64, step = 1 })
 	group.args.privateAuras.args.icon.args.amount = ACH:Range(L["Amount"], nil, 3, { min = 1, max = 5, step = 1 })
 	group.args.privateAuras.args.icon.args.size = ACH:Range(L["Size"], nil, 4, { min = 6, max = 80, step = 1 })
@@ -349,7 +348,7 @@ local function GetUnitSettings(unit, name)
 		group.args.general.args.useStaticPosition = ACH:Toggle(L["Use Static Position"], L["When enabled the nameplate will stay visible in a locked position."], 105, nil, nil, nil, nil, nil, function() return not E.db.nameplates.units[unit].enable end)
 	elseif unit == 'FRIENDLY_PLAYER' or unit == 'ENEMY_PLAYER' then
 		group.args.general.args.markHealers = ACH:Toggle(L["Healer Icon"], L["Display a healer icon over known healers inside battlegrounds or arenas."], 105)
-		group.args.general.args.markHealers = ACH:Toggle(L["Tank Icon"], L["Display a tank icon over known tanks inside battlegrounds or arenas."], 106)
+		group.args.general.args.markTanks = ACH:Toggle(L["Tank Icon"], L["Display a tank icon over known tanks inside battlegrounds or arenas."], 106)
 	elseif unit == 'ENEMY_NPC' or unit == 'FRIENDLY_NPC' then
 		group.args.eliteIcon = ACH:Group(L["Elite Icon"], nil, 75, nil, function(info) return E.db.nameplates.units[unit].eliteIcon[info[#info]] end, function(info, value) E.db.nameplates.units[unit].eliteIcon[info[#info]] = value NP:ConfigureAll() end)
 		group.args.eliteIcon.args.enable = ACH:Toggle(L["Enable"], nil, 1)
@@ -363,23 +362,29 @@ local function GetUnitSettings(unit, name)
 		group.args.questIcon = ACH:Group(L["Quest Icon"], nil, 70, nil, function(info) return E.db.nameplates.units[unit].questIcon[info[#info]] end, function(info, value) E.db.nameplates.units[unit].questIcon[info[#info]] = value NP:ConfigureAll() end, nil, not E.Retail)
 		group.args.questIcon.args.enable = ACH:Toggle(L["Enable"], nil, 1)
 		group.args.questIcon.args.hideIcon = ACH:Toggle(L["Hide Icon"], nil, 2)
-		group.args.questIcon.args.size = ACH:Range(L["Size"], nil, 3, { min = 12, max = 64, step = 1 })
-		group.args.questIcon.args.position = ACH:Select(L["Position"], nil, 4, C.Values.AllPositions)
-		group.args.questIcon.args.xOffset = ACH:Range(L["X-Offset"], nil, 5, { min = -100, max = 100, step = 1 })
-		group.args.questIcon.args.yOffset = ACH:Range(L["Y-Offset"], nil, 6, { min = -100, max = 100, step = 1 })
+		group.args.questIcon.args.position = ACH:Select(L["Position"], nil, 3, C.Values.AllPositions)
+		group.args.questIcon.args.spacer1 = ACH:Spacer(5, 'full')
+		group.args.questIcon.args.size = ACH:Range(L["Size"], nil, 6, { min = 12, max = 64, step = 1 })
+		group.args.questIcon.args.spacing = ACH:Range(L["Spacing"], nil, 7, { min = -20, max = 20, step = 1 })
+		group.args.questIcon.args.xOffset = ACH:Range(L["X-Offset"], nil, 8, { min = -80, max = 80, step = 1 })
+		group.args.questIcon.args.yOffset = ACH:Range(L["Y-Offset"], nil, 9, { min = -80, max = 80, step = 1 })
 
-		group.args.questIcon.args.fontGroup = ACH:Group('', nil, 7)
+		group.args.questIcon.args.fontGroup = ACH:Group('', nil, 20)
 		group.args.questIcon.args.fontGroup.inline = true
 		group.args.questIcon.args.fontGroup.args.font = ACH:SharedMediaFont(L["Font"], nil, 1)
 		group.args.questIcon.args.fontGroup.args.fontSize = ACH:Range(L["Font Size"], nil, 2, { min = 4, max = 60, step = 1 })
 		group.args.questIcon.args.fontGroup.args.fontOutline = ACH:FontFlags(L["Font Outline"], nil, 3)
-		group.args.questIcon.args.fontGroup.args.textPosition = ACH:Select(L["Text Position"], nil, 4, C.Values.AllPoints)
+		group.args.questIcon.args.fontGroup.args.spacer1 = ACH:Spacer(5, 'full')
+		group.args.questIcon.args.fontGroup.args.textPosition = ACH:Select(L["Text Position"], nil, 6, C.Values.AllPoints)
+		group.args.questIcon.args.fontGroup.args.textXOffset = ACH:Range(L["X-Offset"], nil, 7, { min = -20, max = 20, step = 1 })
+		group.args.questIcon.args.fontGroup.args.textYOffset = ACH:Range(L["Y-Offset"], nil, 8, { min = -20, max = 20, step = 1 })
 	end
 
 	if unit == 'PLAYER' or unit == 'FRIENDLY_PLAYER' or unit == 'ENEMY_PLAYER' then
 		group.args.healthGroup.args.useClassColor = ACH:Toggle(L["Use Class Color"], nil, 10)
 
-		group.args.portraitGroup.args.classicon = ACH:Toggle(L["Class Icon"], nil, 2)
+		group.args.portraitGroup.args.specicon = ACH:Toggle(L["Spec Icon"], nil, 21, nil, nil, nil, nil, nil, nil, not E.Retail)
+		group.args.portraitGroup.args.keepSizeRatio = ACH:Toggle(L["Keep Size Ratio"], nil, 22, nil, nil, nil, nil, nil, nil, not E.Retail)
 
 		group.args.pvpclassificationindicator = ACH:Group(L["PvP Classification Indicator"], L["Cart / Flag / Orb / Assassin Bounty"], 70, nil, function(info) return E.db.nameplates.units[unit].pvpclassificationindicator[info[#info]] end, function(info, value) E.db.nameplates.units[unit].pvpclassificationindicator[info[#info]] = value NP:ConfigureAll() end)
 		group.args.pvpclassificationindicator.args.enable = ACH:Toggle(L["Enable"], nil, 1)
@@ -420,7 +425,7 @@ NamePlates.generalGroup.args.spacer2 = ACH:Spacer(15, 'full')
 NamePlates.generalGroup.args.plateVisibility = ACH:Group(L["Visibility"], nil, 50)
 NamePlates.generalGroup.args.plateVisibility.args.showAll = ACH:Toggle(L["UNIT_NAMEPLATES_AUTOMODE"], L["This option controls the Blizzard setting for whether or not the Nameplates should be shown."], 0, nil, nil, 250, function(info) return E.db.nameplates.visibility[info[#info]] end, function(info, value) E.db.nameplates.visibility[info[#info]] = value NP:SetCVars() NP:ConfigureAll() end)
 NamePlates.generalGroup.args.plateVisibility.args.showAlways = ACH:Toggle(L["Always Show Player"], nil, 1, nil, nil, nil, function(info) return E.db.nameplates.units.PLAYER.visibility[info[#info]] end, function(info, value) E.db.nameplates.units.PLAYER.visibility[info[#info]] = value NP:SetCVars() NP:ConfigureAll() end)
-NamePlates.generalGroup.args.plateVisibility.args.cvars = ACH:MultiSelect(L["Blizzard CVars"], nil, 3, { nameplateOtherAtBase = L["Nameplate At Base"], nameplateShowOnlyNames = L["Show Only Names"] }, nil, nil, function(_, key) return E.db.nameplates.visibility[key] or GetCVarBool(key) end, function(_, key, value) SetCVar(key, value and (key == 'nameplateOtherAtBase' and '2' or '1') or '0') if key == 'nameplateShowOnlyNames' then E.db.nameplates.visibility[key] = value end end)
+NamePlates.generalGroup.args.plateVisibility.args.cvars = ACH:MultiSelect(L["Blizzard CVars"], nil, 3, { nameplateOtherAtBase = L["Nameplate At Base"], nameplateShowOnlyNames = L["Show Only Names"] }, nil, nil, function(_, key) return E.db.nameplates.visibility[key] or GetCVarBool(key) end, function(_, key, value) E:SetCVar(key, value and (key == 'nameplateOtherAtBase' and 2 or 1) or 0) if key == 'nameplateShowOnlyNames' then E.db.nameplates.visibility[key] = value end end)
 NamePlates.generalGroup.args.plateVisibility.args.playerVisibility = ACH:Group(L["Player"], nil, 5, nil, function(info) return E.db.nameplates.units.PLAYER.visibility[info[#info]] end, function(info, value) E.db.nameplates.units.PLAYER.visibility[info[#info]] = value NP:SetCVars() NP:ConfigureAll() end)
 NamePlates.generalGroup.args.plateVisibility.args.playerVisibility.inline = true
 NamePlates.generalGroup.args.plateVisibility.args.playerVisibility.args.showInCombat = ACH:Toggle(L["Show In Combat"], nil, 1, nil, nil, nil, nil, nil, function() return not E.db.nameplates.units.PLAYER.enable or E.db.nameplates.units.PLAYER.visibility.showAlways end)
@@ -447,8 +452,8 @@ NamePlates.generalGroup.args.bossMods.args.settings.args.spacing = ACH:Range(L["
 NamePlates.generalGroup.args.bossMods.args.settings.args.xOffset = ACH:Range(L["X-Offset"], nil, 5, { min = -100, max = 100, step = 1 })
 NamePlates.generalGroup.args.bossMods.args.settings.args.yOffset = ACH:Range(L["Y-Offset"], nil, 6, { min = -100, max = 100, step = 1 })
 NamePlates.generalGroup.args.bossMods.args.settings.args.anchorPoint = ACH:Select(L["Anchor Point"], L["What point to anchor to the frame you set to attach to."], 7, C.Values.Anchors)
-NamePlates.generalGroup.args.bossMods.args.settings.args.growthX = ACH:Select(L["Growth X-Direction"], nil, 8, { LEFT = L["Left"], RIGHT = L["Right"] }, nil, nil, nil, nil, function() local point = E.db.nameplates.bossMods.anchorPoint return point == 'LEFT' or point == 'RIGHT' end)
-NamePlates.generalGroup.args.bossMods.args.settings.args.growthY = ACH:Select(L["Growth Y-Direction"], nil, 9, { UP = L["Up"], DOWN = L["Down"] }, nil, nil, nil, nil, function() local point = E.db.nameplates.bossMods.anchorPoint return point == 'TOP' or point == 'BOTTOM' end)
+NamePlates.generalGroup.args.bossMods.args.settings.args.growthX = ACH:Select(L["Growth X-Direction"], nil, 8, { LEFT = L["Left"], RIGHT = L["Right"] }, nil, nil, nil, nil, function() local point = E.db.nameplates.bossMods.anchorPoint return point == 'LEFT' or point == 'RIGHT' or not (IsAddOnLoaded('BigWigs') or IsAddOnLoaded('DBM-Core')) end)
+NamePlates.generalGroup.args.bossMods.args.settings.args.growthY = ACH:Select(L["Growth Y-Direction"], nil, 9, { UP = L["Up"], DOWN = L["Down"] }, nil, nil, nil, nil, function() local point = E.db.nameplates.bossMods.anchorPoint return point == 'TOP' or point == 'BOTTOM' or not (IsAddOnLoaded('BigWigs') or IsAddOnLoaded('DBM-Core')) end)
 
 NamePlates.generalGroup.args.clickThrough = ACH:Group(L["Click Through"], nil, 65, nil, function(info) return E.db.nameplates.clickThrough[info[#info]] end)
 NamePlates.generalGroup.args.clickThrough.args.personal = ACH:Toggle(L["Personal"], nil, 1, nil, nil, nil, nil, function(info, value) E.db.nameplates.clickThrough[info[#info]] = value NP:SetNamePlateSelfClickThrough() end)
@@ -494,6 +499,11 @@ NamePlates.generalGroup.args.threatGroup.args.useThreatColor = ACH:Toggle(L["Use
 NamePlates.generalGroup.args.threatGroup.args.beingTankedByTank = ACH:Toggle(L["Off Tank"], L["Use Off Tank Color when another Tank has threat."], 4, nil, nil, nil, nil, nil, function() return not E.db.nameplates.threat.useThreatColor end)
 NamePlates.generalGroup.args.threatGroup.args.beingTankedByPet = ACH:Toggle(L["Off Tank (Pets)"], nil, 5, nil, nil, nil, nil, nil, function() return not E.db.nameplates.threat.useThreatColor end)
 NamePlates.generalGroup.args.threatGroup.args.indicator = ACH:Toggle(L["Show Icon"], nil, 6, nil, nil, nil, nil, nil, function() return not E.db.nameplates.threat.enable end)
+
+NamePlates.generalGroup.args.widgetGroup = ACH:Group(L["Widget"], nil, 90, nil, function(info) return E.db.nameplates.widgets[info[#info]] end, function(info, value) E.db.nameplates.widgets[info[#info]] = value NP:ConfigureAll() end)
+NamePlates.generalGroup.args.widgetGroup.args.xOffset = ACH:Range(L["X-Offset"], nil, 1, { min = -100, max = 100, step = 1 })
+NamePlates.generalGroup.args.widgetGroup.args.yOffset = ACH:Range(L["Y-Offset"], nil, 2, { min = -100, max = 100, step = 1 })
+NamePlates.generalGroup.args.widgetGroup.args.below = ACH:Toggle(L["Below"], nil, 3)
 
 NamePlates.colorsGroup = ACH:Group(L["Colors"], nil, 15, nil, nil, nil, function() return not E.NamePlates.Initialized end)
 NamePlates.colorsGroup.args.general = ACH:Group(L["General"], nil, 1, nil, function(info) local t, d = E.db.nameplates.colors[info[#info]], P.nameplates.colors[info[#info]] return t.r, t.g, t.b, t.a, d.r, d.g, d.b, d.a end, function(info, r, g, b, a) local t = E.db.nameplates.colors[info[#info]] t.r, t.g, t.b, t.a = r, g, b, a NP:ConfigureAll() end)

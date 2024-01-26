@@ -20,7 +20,7 @@ local function HandleCheckBox(checkbox)
 					checkedTexture:SetInside(checkbox.backdrop)
 				end
 			else
-				region:SetTexture('')
+				region:SetTexture(E.ClearTexture)
 			end
 		end
 	end
@@ -55,7 +55,10 @@ function S:EditorManagerFrame()
 	local editMode = _G.EditModeManagerFrame
 	editMode:StripTextures()
 	editMode:CreateBackdrop('Transparent')
-	editMode.Tutorial:Kill()
+
+	if E.global.general.disableTutorialButtons then
+		editMode.Tutorial:Kill()
+	end
 
 	S:HandleCloseButton(editMode.CloseButton)
 	S:HandleButton(editMode.RevertAllChangesButton)

@@ -121,12 +121,13 @@ local function TabTextureCoords(tex, x1)
 end
 
 local function FixSidebarTabCoords()
-	for i=1, #_G.PAPERDOLL_SIDEBARS do
-		local tab = _G['PaperDollSidebarTab'..i]
-
-		if tab and not tab.backdrop then
+	local index = 1
+	local tab = _G['PaperDollSidebarTab'..index]
+	while tab do
+		if not tab.backdrop then
 			tab:CreateBackdrop()
 			tab.Icon:SetAllPoints()
+
 			tab.Highlight:SetColorTexture(1, 1, 1, 0.3)
 			tab.Highlight:SetAllPoints()
 
@@ -140,7 +141,7 @@ local function FixSidebarTabCoords()
 			tab.Hider:SetAllPoints(tab.backdrop)
 			tab.TabBg:Kill()
 
-			if i == 1 then
+			if index == 1 then
 				for _, region in next, { tab:GetRegions() } do
 					region:SetTexCoord(0.16, 0.86, 0.16, 0.86)
 
@@ -148,6 +149,9 @@ local function FixSidebarTabCoords()
 				end
 			end
 		end
+
+		index = index + 1
+		tab = _G['PaperDollSidebarTab'..index]
 	end
 end
 
@@ -295,18 +299,9 @@ function S:CharacterFrame()
 	_G.CharacterModelScene:CreateBackdrop()
 	_G.CharacterModelScene.backdrop:Point('TOPLEFT', E.PixelMode and -1 or -2, E.PixelMode and 1 or 2)
 	_G.CharacterModelScene.backdrop:Point('BOTTOMRIGHT', E.PixelMode and 1 or 2, E.PixelMode and -2 or -3)
-
 	_G.CharacterFrameInset:CreateBackdrop('Transparent', nil, nil, nil, nil, nil, nil, nil, true)
 
-	for _, button in pairs({
-		'CharacterModelSceneZoomInButton',
-		'CharacterModelSceneZoomOutButton',
-		'CharacterModelSceneRotateLeftButton',
-		'CharacterModelSceneRotateRightButton',
-		'CharacterModelSceneRotateResetButton',
-	}) do
-		S:HandleButton(_G[button])
-	end
+	S:HandleModelSceneControlButtons(_G.CharacterModelScene.ControlFrame)
 
 	--Titles
 	hooksecurefunc(_G.PaperDollFrame.TitleManagerPane.ScrollBox, 'Update', function(frame)
@@ -325,9 +320,9 @@ function S:CharacterFrame()
 	hooksecurefunc(_G.PaperDollFrame.EquipmentManagerPane.ScrollBox, 'Update', function(frame)
 		for _, child in next, { frame.ScrollTarget:GetChildren() } do
 			if child.icon and not child.isSkinned then
-				child.BgTop:SetTexture('')
-				child.BgMiddle:SetTexture('')
-				child.BgBottom:SetTexture('')
+				child.BgTop:SetTexture(E.ClearTexture)
+				child.BgMiddle:SetTexture(E.ClearTexture)
+				child.BgBottom:SetTexture(E.ClearTexture)
 				S:HandleIcon(child.icon)
 				child.HighlightBar:SetColorTexture(1, 1, 1, .25)
 				child.HighlightBar:SetDrawLayer('BACKGROUND')
@@ -341,23 +336,26 @@ function S:CharacterFrame()
 
 	-- Icon selection frame
 	_G.GearManagerPopupFrame:HookScript('OnShow', function(frame)
-		if frame.isSkinned then return end
+		if frame.isSkinned then return end -- set by HandleIconSelectionFrame
+
 		S:HandleIconSelectionFrame(frame)
 	end)
 
-	-- Reposition Tabs
-	_G.CharacterFrameTab1:ClearAllPoints()
-	_G.CharacterFrameTab2:ClearAllPoints()
-	_G.CharacterFrameTab3:ClearAllPoints()
-	_G.CharacterFrameTab1:Point('TOPLEFT', _G.CharacterFrame, 'BOTTOMLEFT', -3, 0)
-	_G.CharacterFrameTab2:Point('TOPLEFT', _G.CharacterFrameTab1, 'TOPRIGHT', -5, 0)
-	_G.CharacterFrameTab3:Point('TOPLEFT', _G.CharacterFrameTab2, 'TOPRIGHT', -5, 0)
-
 	do --Handle Tabs at bottom of character frame
 		local i = 1
-		local tab = _G['CharacterFrameTab'..i]
+		local tab, prev = _G['CharacterFrameTab'..i]
 		while tab do
 			S:HandleTab(tab)
+
+			tab:ClearAllPoints()
+
+			if prev then -- Reposition Tabs
+				tab:Point('TOPLEFT', prev, 'TOPRIGHT', -5, 0)
+			else
+				tab:Point('TOPLEFT', _G.CharacterFrame, 'BOTTOMLEFT', -3, 0)
+			end
+
+			prev = tab
 
 			i = i + 1
 			tab = _G['CharacterFrameTab'..i]
@@ -378,12 +376,14 @@ function S:CharacterFrame()
 	-- Currency Frame
 	_G.TokenFramePopup:StripTextures()
 	_G.TokenFramePopup:SetTemplate('Transparent')
-	if _G.TokenFramePopup.CloseButton then  -- Probably Blizzard Typo
-		S:HandleCloseButton(_G.TokenFramePopup.CloseButton)
-	end
 	_G.TokenFramePopup:Point('TOPLEFT', _G.TokenFrame, 'TOPRIGHT', 3, -28)
+
 	S:HandleCheckBox(_G.TokenFramePopup.InactiveCheckBox)
 	S:HandleCheckBox(_G.TokenFramePopup.BackpackCheckBox)
+
+	if _G.TokenFramePopup.CloseButton then
+		S:HandleCloseButton(_G.TokenFramePopup.CloseButton)
+	end
 
 	hooksecurefunc(_G.TokenFrame.ScrollBox, 'Update', function(frame)
 		for _, child in next, { frame.ScrollTarget:GetChildren() } do
@@ -391,13 +391,16 @@ function S:CharacterFrame()
 				child.CategoryLeft:SetAlpha(0)
 				child.CategoryRight:SetAlpha(0)
 				child.CategoryMiddle:SetAlpha(0)
+				child.Stripe:SetAlpha(0.75)
 
 				child.Highlight:SetInside()
-				child.Highlight.SetPoint = E.noop
 				child.Highlight:SetColorTexture(1, 1, 1, .25)
+
+				child.Highlight.SetPoint = E.noop
 				child.Highlight.SetTexture = E.noop
 
-				S:HandleIcon(child.Icon)
+				S:HandleIcon(child.Icon, true)
+				child.Icon.backdrop:SetFrameLevel(child:GetFrameLevel())
 
 				if child.ExpandIcon then
 					child.ExpandIcon:CreateBackdrop('Transparent')
@@ -407,11 +410,9 @@ function S:CharacterFrame()
 				child.IsSkinned = true
 			end
 
-			if child.isHeader then
-				child.ExpandIcon.backdrop:Show()
-			else
-				child.ExpandIcon.backdrop:Hide()
-			end
+			child.Icon.backdrop:SetShown(not child.isHeader)
+			child.ExpandIcon.backdrop:SetShown(child.isHeader)
+			child.Stripe:SetShown(not child.isHeader)
 		end
 	end)
 

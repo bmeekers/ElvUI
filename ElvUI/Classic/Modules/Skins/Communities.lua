@@ -23,8 +23,7 @@ local function UpdateNames(button)
 	if memberInfo and memberInfo.classID then
 		local classInfo = C_CreatureInfo_GetClassInfo(memberInfo.classID)
 		if classInfo then
-			local tcoords = _G.CLASS_ICON_TCOORDS[classInfo.classFile]
-			button.Class:SetTexCoord(tcoords[1] + .022, tcoords[2] - .025, tcoords[3] + .022, tcoords[4] - .025)
+			button.Class:SetTexCoord(E:GetClassCoords(classInfo.classFile, true))
 		end
 	end
 end
@@ -83,6 +82,14 @@ function S:Blizzard_Communities()
 	for i = 1, 5 do
 		S:HandleTab(_G['CommunitiesFrameTab'..i])
 	end
+
+	-- Reposition Tabs
+	_G.CommunitiesFrameTab1:ClearAllPoints()
+	_G.CommunitiesFrameTab1:Point('TOPLEFT', _G.CommunitiesFrame, 'BOTTOMLEFT', -15, 0)
+	_G.CommunitiesFrameTab2:Point('TOPLEFT', _G.CommunitiesFrameTab1, 'TOPRIGHT', -19, 0)
+	_G.CommunitiesFrameTab3:Point('TOPLEFT', _G.CommunitiesFrameTab2, 'TOPRIGHT', -19, 0)
+	_G.CommunitiesFrameTab4:Point('TOPLEFT', _G.CommunitiesFrameTab3, 'TOPRIGHT', -19, 0)
+	_G.CommunitiesFrameTab5:Point('TOPLEFT', _G.CommunitiesFrameTab4, 'TOPRIGHT', -19, 0)
 
 	hooksecurefunc(_G.CommunitiesListEntryMixin, 'SetClubInfo', function(list, clubInfo, isInvitation, isTicket)
 		if clubInfo then
@@ -190,7 +197,7 @@ function S:Blizzard_Communities()
 	S:HandleInsetFrame(CommunitiesFrame.MemberList.InsetFrame)
 	S:HandleButton(CommunitiesFrame.CommunitiesControlFrame.CommunitiesSettingsButton)
 	S:HandleCheckBox(CommunitiesFrame.MemberList.ShowOfflineButton)
-	CommunitiesFrame.MemberList.ShowOfflineButton:Size(25, 25)
+	CommunitiesFrame.MemberList.ShowOfflineButton:Size(25)
 
 	hooksecurefunc(CommunitiesFrame.MemberList, 'RefreshListDisplay', function(members)
 		for _, child in next, { members.ColumnDisplay:GetChildren() } do

@@ -3,11 +3,15 @@ local M = E:GetModule('WorldMap')
 
 local _G = _G
 local strfind = strfind
+
 local CreateFrame = CreateFrame
-local SetUIPanelAttribute = SetUIPanelAttribute
 local hooksecurefunc = hooksecurefunc
 local IsPlayerMoving = IsPlayerMoving
+local SetUIPanelAttribute = SetUIPanelAttribute
 local PlayerMovementFrameFader = PlayerMovementFrameFader
+
+local GetCVar = C_CVar.GetCVar
+
 local MOUSE_LABEL = MOUSE_LABEL:gsub('|[TA].-|[ta]','')
 local PLAYER = PLAYER
 
@@ -162,15 +166,28 @@ function M:StopMapFromFading()
 	end
 end
 
+function M:UpdateMapMaxOpacity() -- currently only executes on Wrath
+	local settings = fadeFrame and fadeFrame.FadeObject and fadeFrame.FadeObject.FadeSettings
+	if not settings then return end
+
+	local opacity = not _G.WorldMapFrame.isMaximized and GetCVar('worldMapOpacity')
+	settings.maxAlpha = opacity and (0.5 + (1.0 - opacity) * 0.50) or 1
+end
+
 function M:EnableMapFading(frame)
 	if not fadeFrame then
 		fadeFrame = CreateFrame('FRAME')
 		fadeFrame:SetScript('OnUpdate', M.MapFadeOnUpdate)
 		frame:HookScript('OnHide', M.StopMapFromFading)
-	end
 
-	if not fadeFrame.FadeObject then fadeFrame.FadeObject = {} end
-	if not fadeFrame.FadeObject.FadeSettings then fadeFrame.FadeObject.FadeSettings = {} end
+		fadeFrame.FadeObject = {}
+		fadeFrame.FadeObject.FadeSettings = {}
+
+		if _G.WorldMapFrame_SaveOpacity then -- currently only Wrath
+			hooksecurefunc('WorldMapFrame_SaveOpacity', M.UpdateMapMaxOpacity)
+			hooksecurefunc(_G.WorldMapFrame, 'OnFrameSizeChanged', M.UpdateMapMaxOpacity)
+		end
+	end
 
 	local settings = fadeFrame.FadeObject.FadeSettings
 	settings.fadePredicate = M.MapShouldFade
@@ -294,7 +311,7 @@ function M:Initialize()
 	-- Enable/Disable map fading when moving
 	-- currently we dont need to touch this cvar because we have our own control for this currently
 	-- see the comment in `M:UpdateMapFade` about `durationSec` for more information
-	-- SetCVar('mapFade', E.global.general.fadeMapWhenMoving and 1 or 0)
+	-- E:SetCVar('mapFade', E.global.general.fadeMapWhenMoving and 1 or 0)
 end
 
 E:RegisterModule(M:GetName())

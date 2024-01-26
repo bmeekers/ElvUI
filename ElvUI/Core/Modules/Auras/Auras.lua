@@ -1,6 +1,7 @@
 local E, L, V, P, G = unpack(ElvUI)
 local A = E:GetModule('Auras')
 local LSM = E.Libs.LSM
+local ElvUF = E.oUF
 
 local _G = _G
 local tonumber = tonumber
@@ -17,7 +18,6 @@ local GameTooltip_Hide = GameTooltip_Hide
 local GameTooltip = GameTooltip
 local CreateFrame = CreateFrame
 local UIParent = UIParent
-local UnitAura = UnitAura
 local GetTime = GetTime
 
 local Masque = E.Masque
@@ -100,7 +100,7 @@ function A:UpdateButton(button)
 	if button.statusBar and button.statusBar:IsShown() then
 		local r, g, b
 		if db.barColorGradient then
-			r, g, b = E.oUF:ColorGradient(button.timeLeft, button.duration or 0, .8, 0, 0, .8, .8, 0, 0, .8, 0)
+			r, g, b = ElvUF:ColorGradient(button.timeLeft, button.duration or 0, .8, 0, 0, .8, .8, 0, 0, .8, 0)
 		else
 			r, g, b = db.barColor.r, db.barColor.g, db.barColor.b
 		end
@@ -128,6 +128,7 @@ function A:CreateIcon(button)
 	button.enchantIndex = tonumber(strmatch(button.name, 'TempEnchant(%d)$'))
 	if button.enchantIndex then
 		button.header['enchant'..button.enchantIndex] = button
+		button.header.enchantButtons[button.enchantIndex] = button
 	else
 		button.instant = true -- let update on attribute change
 	end
@@ -181,7 +182,6 @@ function A:CreateIcon(button)
 	A:UpdateIcon(button)
 
 	E:SetSmoothing(button.statusBar)
-	E:SetUpAnimGroup(button)
 
 	if button.filter == 'HELPFUL' and MasqueGroupBuffs and E.private.auras.masque.buffs then
 		MasqueGroupBuffs:AddButton(button, A:MasqueData(button.texture, button.highlight))
@@ -196,8 +196,13 @@ function A:CreateIcon(button)
 	end
 end
 
-function A:UpdateIcon(button)
+function A:UpdateIcon(button, update)
 	local db = A.db[button.auraType]
+
+	if update then
+		button:Size(db.size)
+	end
+
 	button.count:ClearAllPoints()
 	button.count:Point('BOTTOMRIGHT', db.countXOffset, db.countYOffset)
 	button.count:FontTemplate(LSM:Fetch('font', db.countFont), db.countFontSize, db.countFontOutline)
@@ -206,13 +211,15 @@ function A:UpdateIcon(button)
 	button.text:Point('TOP', button, 'BOTTOM', db.timeXOffset, db.timeYOffset)
 	button.text:FontTemplate(LSM:Fetch('font', db.timeFont), db.timeFontSize, db.timeFontOutline)
 
-	local pos, spacing, iconSize = db.barPosition, db.barSpacing, db.size - (E.Border * 2)
-	local isOnTop, isOnBottom, isOnLeft = pos == 'TOP', pos == 'BOTTOM', pos == 'LEFT'
-	local isHorizontal = isOnTop or isOnBottom
+	local pos, iconSize = db.barPosition, db.size - (E.Border * 2)
+	local onTop, onBottom, onLeft = pos == 'TOP', pos == 'BOTTOM', pos == 'LEFT'
+	local barSpacing = db.barSpacing + (E.PixelMode and 1 or 3)
+	local barSize = db.barSize + (E.PixelMode and 0 or 2)
+	local isHorizontal = onTop or onBottom
 
 	button.statusBar:ClearAllPoints()
-	button.statusBar:Size(isHorizontal and iconSize or (db.barSize + (E.PixelMode and 0 or 2)), isHorizontal and (db.barSize + (E.PixelMode and 0 or 2)) or iconSize)
-	button.statusBar:Point(E.InversePoints[pos], button, pos, isHorizontal and 0 or ((isOnLeft and -((E.PixelMode and 1 or 3) + spacing)) or ((E.PixelMode and 1 or 3) + spacing)), not isHorizontal and 0 or ((isOnTop and ((E.PixelMode and 1 or 3) + spacing) or -((E.PixelMode and 1 or 3) + spacing))))
+	button.statusBar:Size(isHorizontal and iconSize or barSize, isHorizontal and barSize or iconSize)
+	button.statusBar:Point(E.InversePoints[pos], button, pos, isHorizontal and 0 or (onLeft and -barSpacing or barSpacing), not isHorizontal and 0 or (onTop and barSpacing or -barSpacing))
 	button.statusBar:SetStatusBarTexture(LSM:Fetch('statusbar', db.barTexture))
 	button.statusBar:SetOrientation(isHorizontal and 'HORIZONTAL' or 'VERTICAL')
 	button.statusBar:SetRotatesTexture(not isHorizontal)
@@ -260,7 +267,7 @@ function A:ClearAuraTime(button, expired)
 end
 
 function A:UpdateAura(button, index)
-	local name, icon, count, debuffType, duration, expiration, _, _, _, _, _, _, _, _, modRate = UnitAura(button.header:GetAttribute('unit'), index, button.filter)
+	local name, icon, count, debuffType, duration, expiration, _, _, _, _, _, _, _, _, modRate = E:GetAuraData(button.header:GetAttribute('unit'), index, button.filter)
 	if not name then return end
 
 	local db = A.db[button.auraType]
@@ -391,9 +398,20 @@ function A:Button_OnAttributeChanged(attr, value)
 	end
 end
 
+function A:Header_OnEvent(event)
+	if event == 'WEAPON_ENCHANT_CHANGED' then
+		local header = self.frame
+		for enchantIndex, button in next, header.enchantButtons do
+			if header.enchants[enchantIndex] ~= button then
+				header.enchants[enchantIndex] = button
+				header.elapsedEnchants = 0 -- reset the timer so we can wait for the data to be ready
+			end
+		end
+	end
+end
+
 function A:Header_OnUpdate(elapsed)
 	local header = self.frame
-
 	if header.elapsedSpells and header.elapsedSpells > 0.1 then
 		local button, value = next(header.spells)
 		while button do
@@ -467,10 +485,9 @@ function A:UpdateHeader(header)
 	while child do
 		child.db = db
 		child.auraType = header.auraType -- used to update cooldown text
-		child:Size(db.size, db.size)
 
 		A:Update_CooldownOptions(child)
-		A:UpdateIcon(child)
+		A:UpdateIcon(child, true)
 
 		--Blizzard bug fix, icons arent being hidden when you reduce the amount of maximum buttons
 		if index > (db.maxWraps * db.wrapAfter) and child:IsShown() then
@@ -494,15 +511,21 @@ function A:CreateAuraHeader(filter)
 	header:RegisterUnitEvent('UNIT_AURA', 'player', 'vehicle')
 	header:SetAttribute('unit', 'player')
 	header:SetAttribute('filter', filter)
+	header.enchantButtons = {}
 	header.enchants = {}
 	header.spells = {}
 
 	header.visibility = CreateFrame('Frame', nil, UIParent, 'SecureHandlerStateTemplate')
 	header.visibility:SetScript('OnUpdate', A.Header_OnUpdate) -- dont put this on the main frame
+	header.visibility:SetScript('OnEvent', A.Header_OnEvent) -- dont put this on the main frame
 	header.visibility.frame = header
 	header.auraType = auraType
 	header.filter = filter
 	header.name = name
+
+	if E.Retail then
+		header.visibility:RegisterEvent('WEAPON_ENCHANT_CHANGED')
+	end
 
 	RegisterAttributeDriver(header, 'unit', '[vehicleui] vehicle; player')
 	SecureHandlerSetFrameRef(header.visibility, 'AuraHeader', header)
@@ -527,6 +550,10 @@ end
 function A:Initialize()
 	if E.private.auras.disableBlizzard then
 		_G.BuffFrame:Kill()
+
+		if E.Retail then -- edit mode error
+			_G.BuffFrame.numHideableBuffs = 0
+		end
 
 		if _G.DebuffFrame then
 			_G.DebuffFrame:Kill()

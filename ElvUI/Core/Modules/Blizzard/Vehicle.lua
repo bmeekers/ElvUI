@@ -1,12 +1,10 @@
 local E, L, V, P, G = unpack(ElvUI)
-local B = E:GetModule('Blizzard')
+local BL = E:GetModule('Blizzard')
 
 local _G = _G
 local hooksecurefunc = hooksecurefunc
 local GetVehicleUIIndicator = GetVehicleUIIndicator
 local GetVehicleUIIndicatorSeat = GetVehicleUIIndicatorSeat
-
--- GLOBALS: VehicleSeatIndicator_UnloadTextures
 
 local function SetPosition(_, _, relativeTo)
 	local mover = _G.VehicleSeatIndicator.mover
@@ -37,11 +35,11 @@ local function VehicleSetUp(vehicleID)
 	end
 end
 
-function B:UpdateVehicleFrame()
+function BL:UpdateVehicleFrame()
 	VehicleSetUp(_G.VehicleSeatIndicator.currSkin)
 end
 
-function B:PositionVehicleFrame()
+function BL:PositionVehicleFrame()
 	local indicator = _G.VehicleSeatIndicator
 	if not indicator.PositionVehicleFrameHooked then
 		hooksecurefunc(indicator, 'SetPoint', SetPosition)
@@ -55,13 +53,15 @@ function B:PositionVehicleFrame()
 		indicator.PositionVehicleFrameHooked = true
 	end
 
-	B:UpdateVehicleFrame()
+	BL:UpdateVehicleFrame()
 
 	if E.Retail and E.private.actionbar.enable then -- fix a taint when actionbars in use
-		VehicleSeatIndicator_UnloadTextures = function()
-			_G.VehicleSeatIndicatorBackgroundTexture:SetTexture()
-			_G.VehicleSeatIndicator:Hide()
-			_G.VehicleSeatIndicator.currSkin = nil
+		indicator.UnloadTextures = function(frame) -- removes UIParent_ManageFramePositions()
+			frame.BackgroundTexture:SetTexture()
+			frame.currSkin = nil
+
+			frame:HideButtons()
+			frame:UpdateShownState()
 
 			_G.DurabilityFrame:SetAlerts()
 		end

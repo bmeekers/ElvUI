@@ -9,6 +9,7 @@ local unpack = unpack
 local tinsert = tinsert
 local strmatch = strmatch
 
+local UIParent = UIParent
 local RaiseFrameLevel = RaiseFrameLevel
 local LowerFrameLevel = LowerFrameLevel
 local hooksecurefunc = hooksecurefunc
@@ -114,36 +115,22 @@ function S:Ace3_TabSetSelected(selected)
 	end
 end
 
-function S:Ace3_SkinTab(tab)
-	tab:StripTextures()
-	tab.text:Point('LEFT', 14, -1)
-
-	tab:CreateBackdrop(nil, true, true)
-	tab.backdrop:Point('TOPLEFT', 10, -3)
-	tab.backdrop:Point('BOTTOMRIGHT', -10, 0)
-
-	hooksecurefunc(tab, 'SetSelected', S.Ace3_TabSetSelected)
+function S:Ace3_ButtonSetPoint(point, anchor, point2, xOffset, yOffset, skip)
+	if not skip and point2 == 'TOPRIGHT' then
+		self:Point(point, anchor, point2, xOffset + 2, yOffset, true)
+	end
 end
 
-local nextPrevColor = {r = 1, g = .8, b = 0}
-function S:Ace3_RegisterAsWidget(widget)
-	local TYPE = widget.type
-	if TYPE == 'MultiLineEditBox' or TYPE == 'MultiLineEditBox-ElvUI' then
-		local frame = widget.frame
-		S:HandleButton(widget.button)
-		S:HandleScrollBar(widget.scrollBar)
+function S:Ace3_SkinButton(button)
+	if not button.isSkinned then
+		S:HandleButton(button, true)
 
-		widget.scrollBG:SetTemplate()
-		widget.scrollBG:Point('TOPRIGHT', widget.scrollBar, 'TOPLEFT', -2, 19)
-		widget.scrollBG:Point('BOTTOMLEFT', widget.button, 'TOPLEFT')
+		hooksecurefunc(button, 'SetPoint', S.Ace3_ButtonSetPoint)
+	end
+end
 
-		widget.scrollBar:Point('RIGHT', frame, 'RIGHT', 0 -4)
-		widget.scrollFrame:Point('BOTTOMRIGHT', widget.scrollBG, 'BOTTOMRIGHT', -4, 8)
-	elseif TYPE == 'CheckBox' then
-		local check = widget.check
-		local checkbg = widget.checkbg
-		local highlight = widget.highlight
-
+function S:Ace3_SkinCheckBox(widget, check, checkbg, highlight)
+	if not checkbg.backdrop then
 		checkbg:CreateBackdrop(nil, nil, nil, nil, nil, nil, nil, nil, true)
 		checkbg.backdrop:SetInside(widget.checkbg, 4, 4)
 
@@ -168,6 +155,53 @@ function S:Ace3_RegisterAsWidget(widget)
 
 		checkbg.SetTexture = E.noop
 		highlight.SetTexture = E.noop
+	end
+end
+
+function S:Ace3_SkinTab(tab)
+	if not tab.backdrop then
+		tab:StripTextures()
+		tab.text:Point('LEFT', 14, -1)
+
+		tab:CreateBackdrop(nil, true, true)
+		tab.backdrop:Point('TOPLEFT', 10, -3)
+		tab.backdrop:Point('BOTTOMRIGHT', -10, 0)
+
+		hooksecurefunc(tab, 'SetSelected', S.Ace3_TabSetSelected)
+	end
+end
+
+function S:Ace3_SkinEditBox(editbox, button)
+	if not editbox.backdrop then
+		S:HandleEditBox(editbox)
+		S:HandleButton(button)
+
+		button:Point('RIGHT', editbox.backdrop, 'RIGHT', -2, 0)
+
+		hooksecurefunc(editbox, 'SetTextInsets', S.Ace3_EditBoxSetTextInsets)
+		hooksecurefunc(editbox, 'SetPoint', S.Ace3_EditBoxSetPoint)
+
+		editbox.backdrop:Point('TOPLEFT', 0, -2)
+		editbox.backdrop:Point('BOTTOMRIGHT', -1, 1)
+	end
+end
+
+local nextPrevColor = {r = 1, g = .8, b = 0}
+function S:Ace3_RegisterAsWidget(widget)
+	local TYPE = widget.type
+	if TYPE == 'MultiLineEditBox' or TYPE == 'MultiLineEditBox-ElvUI' then
+		local frame = widget.frame
+		S:HandleButton(widget.button)
+		S:HandleScrollBar(widget.scrollBar)
+
+		widget.scrollBG:SetTemplate()
+		widget.scrollBG:Point('TOPRIGHT', widget.scrollBar, 'TOPLEFT', -2, 19)
+		widget.scrollBG:Point('BOTTOMLEFT', widget.button, 'TOPLEFT')
+
+		widget.scrollBar:Point('RIGHT', frame, 'RIGHT', 0 -4)
+		widget.scrollFrame:Point('BOTTOMRIGHT', widget.scrollBG, 'BOTTOMRIGHT', -4, 8)
+	elseif TYPE == 'CheckBox' then
+		S:Ace3_SkinCheckBox(widget, widget.check, widget.checkbg, widget.highlight)
 	elseif TYPE == 'Dropdown' or TYPE == 'LQDropdown' then
 		local frame = widget.dropdown
 		local button = widget.button
@@ -235,22 +269,10 @@ function S:Ace3_RegisterAsWidget(widget)
 		button:SetParent(frame.backdrop)
 		text:SetParent(frame.backdrop)
 		button:HookScript('OnClick', S.Ace3_SkinDropdown)
-	elseif TYPE == 'EditBox' then
-		local frame = widget.editbox
-		local button = widget.button
-		S:HandleEditBox(frame)
-		S:HandleButton(button)
-
-		button:Point('RIGHT', frame.backdrop, 'RIGHT', -2, 0)
-
-		hooksecurefunc(frame, 'SetTextInsets', S.Ace3_EditBoxSetTextInsets)
-		hooksecurefunc(frame, 'SetPoint', S.Ace3_EditBoxSetPoint)
-
-		frame.backdrop:Point('TOPLEFT', 0, -2)
-		frame.backdrop:Point('BOTTOMRIGHT', -1, 1)
+	elseif TYPE == 'EditBox' or TYPE == 'EditBox-ElvUI' then
+		S:Ace3_SkinEditBox(widget.editbox, widget.button)
 	elseif TYPE == 'Button' or TYPE == 'Button-ElvUI' then
-		local frame = widget.frame
-		S:HandleButton(frame, true)
+		S:Ace3_SkinButton(widget.frame)
 	elseif TYPE == 'Slider' or TYPE == 'Slider-ElvUI' then
 		local frame = widget.slider
 		local editbox = widget.editbox
@@ -328,11 +350,13 @@ function S:Ace3_RefreshTree(scrollToSelection)
 	if self.userdata and self.userdata.option and self.userdata.option.childGroups == 'ElvUI_HiddenTree' then
 		self.border:Point('TOPLEFT', self.treeframe, 'TOPRIGHT', 1, 13)
 		self.border:Point('BOTTOMRIGHT', self.frame, 'BOTTOMRIGHT', 6, 0)
+		self.treeframe:Point('TOPLEFT', 0, 0)
 		self.treeframe:Hide()
 		return
 	else
 		self.border:Point('TOPLEFT', self.treeframe, 'TOPRIGHT')
 		self.border:Point('BOTTOMRIGHT', self.frame)
+		self.treeframe:Point('TOPLEFT', 0, -2)
 		self.treeframe:Show()
 	end
 
@@ -372,6 +396,7 @@ function S:Ace3_RegisterAsContainer(widget)
 		local frame = widget.content:GetParent()
 		if TYPE == 'Frame' then
 			frame:StripTextures()
+
 			for _, child in next, { frame:GetChildren() } do
 				if child:IsObjectType('Button') and child:GetText() then
 					S:HandleButton(child)
@@ -381,6 +406,7 @@ function S:Ace3_RegisterAsContainer(widget)
 			end
 		elseif TYPE == 'Window' then
 			frame:StripTextures()
+
 			S:HandleCloseButton(frame.obj.closebutton)
 		end
 
@@ -411,17 +437,6 @@ function S:Ace3_RegisterAsContainer(widget)
 		if widget.scrollbar then
 			S:HandleScrollBar(widget.scrollbar)
 		end
-	elseif TYPE == 'SimpleGroup' then
-		local content = widget.content
-
-		local frame = content:GetParent()
-		frame:SetTemplate('Transparent')
-		frame.callbackBackdropColor = S.Ace3_BackdropColor
-		S.Ace3_BackdropColor(frame)
-
-		content:ClearAllPoints()
-		content:SetPoint('TOPLEFT', 6, 2)
-		content:SetPoint('BOTTOMRIGHT', -6, 2)
 	end
 
 	if widget.sizer_se then
@@ -549,6 +564,7 @@ do -- Early Skin Loading
 		['AceGUI'] = true,
 		['AceConfigDialog'] = true,
 		['AceConfigDialog-3.0-ElvUI'] = true,
+		['LibDropDownMenu'] = true,
 		['LibUIDropDownMenu'] = true,
 		['LibUIDropDownMenuQuestie'] = true,
 		['NoTaint_UIDropDownMenu'] = true,
@@ -576,6 +592,12 @@ do -- Early Skin Loading
 					tinsert(S.EarlyAceTooltips, major)
 				else
 					S:Ace3_SkinTooltip(LibStub.libs[major], LibStub.minors[major])
+				end
+			elseif n == 'LibDropDownMenu' then
+				if early then
+					tinsert(S.EarlyDropdowns, 'LibDropDownMenu_List')
+				elseif E.private.skins.libDropdown then
+					S:SkinDropDownMenu('LibDropDownMenu_List', 15)
 				end
 			else
 				local prefix = (n == 'NoTaint_UIDropDownMenu' and 'Lib') or (n == 'LibUIDropDownMenuQuestie' and 'LQuestie') or (major == 'LibUIDropDownMenu-4.0' and 'L4' or major == 'LibUIDropDownMenu-3.0' and 'L3')
@@ -606,7 +628,7 @@ do -- Early Skin Loading
 
 	for n in next, LibStub.libs do
 		if n == 'AceGUI-3.0' then
-			for _, x in ipairs({_G.UIParent:GetChildren()}) do
+			for _, x in ipairs({UIParent:GetChildren()}) do
 				if x and x.obj then earlyWidget(x.obj) end
 			end
 		end

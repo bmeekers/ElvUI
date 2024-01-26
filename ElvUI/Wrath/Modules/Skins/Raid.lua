@@ -4,7 +4,6 @@ local S = E:GetModule('Skins')
 local _G = _G
 local ipairs, unpack = ipairs, unpack
 local hooksecurefunc = hooksecurefunc
-local CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
 local CLASS_SORT_ORDER = CLASS_SORT_ORDER
 
 local StripAllTextures = {
@@ -48,15 +47,12 @@ function S:Blizzard_RaidUI()
 	_G.RaidClassButton1:ClearAllPoints()
 	_G.RaidClassButton1:Point('TOPLEFT', _G.RaidFrame, 'TOPRIGHT', -50, -50)
 
-	-- Classes on the right side of the Raid Control
-	do
+	do -- Classes on the right side of the Raid Control
 		local prevButton
-		local button, icon, count, coords
-
 		for index = 1, 13 do
-			button = _G['RaidClassButton'..index]
-			icon = _G['RaidClassButton'..index..'IconTexture']
-			count = _G['RaidClassButton'..index..'Count']
+			local button = _G['RaidClassButton'..index]
+			local icon = _G['RaidClassButton'..index..'IconTexture']
+			local count = _G['RaidClassButton'..index..'Count']
 
 			button:StripTextures()
 			button:SetTemplate()
@@ -75,21 +71,21 @@ function S:Blizzard_RaidUI()
 			icon:SetInside()
 
 			if index == 11 then
-				icon:SetTexture('Interface\\RaidFrame\\UI-RaidFrame-Pets')
+				icon:SetTexture([[Interface\RaidFrame\UI-RaidFrame-Pets]])
 				icon:SetTexCoord(unpack(E.TexCoords))
 			elseif index == 12 then
-				icon:SetTexture('Interface\\RaidFrame\\UI-RaidFrame-MainTank')
+				icon:SetTexture([[Interface\RaidFrame\UI-RaidFrame-MainTank]])
 				icon:SetTexCoord(unpack(E.TexCoords))
 			elseif index == 13 then
-				icon:SetTexture('Interface\\RaidFrame\\UI-RaidFrame-MainAssist')
+				icon:SetTexture([[Interface\RaidFrame\UI-RaidFrame-MainAssist]])
 				icon:SetTexCoord(unpack(E.TexCoords))
 			else
-				coords = CLASS_ICON_TCOORDS[CLASS_SORT_ORDER[index]]
-				icon:SetTexture('Interface\\WorldStateFrame\\Icons-Classes')
-				icon:SetTexCoord(coords[1] + 0.02, coords[2] - 0.02, coords[3] + 0.02, coords[4] - 0.02)
+				icon:SetTexture([[Interface\WorldStateFrame\Icons-Classes]])
+				icon:SetTexCoord(E:GetClassCoords(CLASS_SORT_ORDER[index], 0.02))
 			end
 
 			count:FontTemplate(nil, 12, 'OUTLINE')
+			count:SetTextHeight(12) -- fixes blur
 		end
 	end
 

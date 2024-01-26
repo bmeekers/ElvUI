@@ -6,7 +6,6 @@
 	<Script file='Battlenet.lua'/>
 	<Script file='BGMap.lua'/>
 	<Script file='BGScore.lua'/>
-	<Script file='Binding.lua'/>
 	<Script file='BlizzardOptions.lua'/>
 	<Script file='Channels.lua'/>
 	<Script file='Character.lua'/>
@@ -14,6 +13,7 @@
 	<Script file='Craft.lua'/>
 	<Script file='Debug.lua'/>
 	<Script file='DressingRoom.lua'/>
+	<Script file='Engraving.lua'/>
 	<Script file='EventTrace.lua'/>
 	<Script file='Friends.lua'/>
 	<Script file='GMChat.lua'/>
@@ -21,7 +21,6 @@
 	<Script file='GuildRegistrar.lua'/>
 	<Script file='Help.lua'/>
 	<Script file='Inspect.lua'/>
-	<Script file='LFG.lua'/>
 	<Script file='Loot.lua'/>
 	<Script file='Macro.lua'/>
 	<Script file='Mail.lua'/>
@@ -32,6 +31,7 @@
 	<Script file='Quest.lua'/>
 	<Script file='QuestTimers.lua'/>
 	<Script file='Raid.lua'/>
+	<Script file='SettingsPanel.lua'/>
 	<Script file='SpellBook.lua'/>
 	<Script file='Stable.lua'/>
 	<Script file='Tabard.lua'/>

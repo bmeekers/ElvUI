@@ -6,8 +6,8 @@ local ACH = E.Libs.ACH
 
 local _G = _G
 local pairs = pairs
-local SetCVar = SetCVar
-local GetCVarBool = GetCVarBool
+
+local GetCVarBool = C_CVar.GetCVarBool
 
 local buttonPositions = {
 	LEFT = L["Left"],
@@ -64,17 +64,17 @@ Maps.args.minimap.args.locationTextGroup = ACH:Group(L["Location Text"], nil, 15
 Maps.args.minimap.args.locationTextGroup.args.locationText = ACH:Select(L["Location Text"], L["Change settings for the display of the location text that is on the minimap."], 1, { MOUSEOVER = L["Minimap Mouseover"], SHOW = L["Always Display"], HIDE = L["Hide"] }, nil, nil, nil, nil, nil, function() return E.Retail and not E.db.general.minimap.clusterDisable end)
 Maps.args.minimap.args.locationTextGroup.args.locationFont = ACH:SharedMediaFont(L["Font"], nil, 2)
 Maps.args.minimap.args.locationTextGroup.args.locationFontSize = ACH:Range(L["Font Size"], nil, 3, textFontSize)
-Maps.args.minimap.args.locationTextGroup.args.locationFontOutline = ACH:Select(L["Font Outline"], nil, 4, C.Values.FontFlags)
+Maps.args.minimap.args.locationTextGroup.args.locationFontOutline = ACH:FontFlags(L["Font Outline"], nil, 4)
 Maps.args.minimap.args.locationTextGroup.inline = true
 
 Maps.args.minimap.args.timeTextGroup = ACH:Group(L["Time Text"], nil, 20, nil, function(info) return E.db.general.minimap[info[#info]] end, function(info, value) E.db.general.minimap[info[#info]] = value; MM:UpdateSettings() end, function() return not E.private.general.minimap.enable end, not E.Retail)
 Maps.args.minimap.args.timeTextGroup.args.timeFont = ACH:SharedMediaFont(L["Font"], nil, 2)
 Maps.args.minimap.args.timeTextGroup.args.timeFontSize = ACH:Range(L["Font Size"], nil, 3, textFontSize)
-Maps.args.minimap.args.timeTextGroup.args.timeFontOutline = ACH:Select(L["Font Outline"], nil, 4, C.Values.FontFlags)
+Maps.args.minimap.args.timeTextGroup.args.timeFontOutline = ACH:FontFlags(L["Font Outline"], nil, 4)
 Maps.args.minimap.args.timeTextGroup.inline = true
 
 Maps.args.minimap.args.icons = ACH:Group(L["Minimap Buttons"], nil, 50, nil, function(info) return E.db.general.minimap.icons[info[#info - 1]][info[#info]] end, function(info, value) E.db.general.minimap.icons[info[#info - 1]][info[#info]] = value; MM:UpdateSettings() end)
-Maps.args.minimap.args.icons.args.classHall = ACH:Group(L["GARRISON_LANDING_PAGE_TITLE"], nil, 1, nil, nil, nil, nil, not E.Retail)
+Maps.args.minimap.args.icons.args.classHall = ACH:Group(L["Expansion Button"], nil, 1, nil, nil, nil, nil, not E.Retail)
 Maps.args.minimap.args.icons.args.classHall.args.hideClassHallReport = ACH:Toggle(L["Hide"], nil, 1, nil, nil, nil, function() return E.private.general.minimap.hideClassHallReport end, function(_, value) E.private.general.minimap.hideClassHallReport = value; MM:UpdateSettings() end)
 Maps.args.minimap.args.icons.args.classHall.args.spacer = ACH:Spacer(2, 'full')
 Maps.args.minimap.args.icons.args.classHall.args.position = ACH:Select(L["Position"], nil, 3, buttonPositions, nil, nil, nil, nil, function() return E.private.general.minimap.hideClassHallReport end)
@@ -89,7 +89,7 @@ Maps.args.minimap.args.icons.args.tracking.args.position = ACH:Select(L["Positio
 Maps.args.minimap.args.icons.args.tracking.args.scale = ACH:Range(L["Scale"], nil, 4, buttonScale, nil, nil, nil, function() return E.private.general.minimap.hideTracking end)
 Maps.args.minimap.args.icons.args.tracking.args.xOffset = ACH:Range(L["X-Offset"], nil, 5, buttonOffsets, nil, nil, nil, function() return E.private.general.minimap.hideTracking end)
 Maps.args.minimap.args.icons.args.tracking.args.yOffset = ACH:Range(L["Y-Offset"], nil, 6, buttonOffsets, nil, nil, nil, function() return E.private.general.minimap.hideTracking end)
-Maps.args.minimap.args.icons.args.tracking.args.showAllTracking  = ACH:Toggle(L["Show All Tracking Options"], nil, 7, nil, nil, nil, function() return GetCVarBool('minimapTrackingShowAll') end, function(_, value) SetCVar('minimapTrackingShowAll', value and 1 or 0) end, nil, not E.Retail)
+Maps.args.minimap.args.icons.args.tracking.args.showAllTracking = ACH:Toggle(L["Show All Tracking Options"], nil, 7, nil, nil, nil, function() return GetCVarBool('minimapTrackingShowAll') end, function(_, value) E:SetCVar('minimapTrackingShowAll', value and 1 or 0) end, nil, not E.Retail)
 
 Maps.args.minimap.args.icons.args.calendar = ACH:Group(L["Calendar"], nil, 5, nil, nil, nil, function() return E.Retail and not E.db.general.minimap.clusterDisable end)
 Maps.args.minimap.args.icons.args.calendar.args.hideCalendar = ACH:Toggle(L["Hide"], nil, 1, nil, nil, nil, function() return E.private.general.minimap.hideCalendar end, function(_, value) E.private.general.minimap.hideCalendar = value; MM:UpdateSettings() end)

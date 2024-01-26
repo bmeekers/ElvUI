@@ -218,7 +218,7 @@ local function SkinInvasionAlert(frame)
 
 			-- Icon border
 			if icon and icon:IsObjectType('Texture') then
-				if icon:GetTexture() == 236293 then -- interface/icons/ability_warlock_demonicpower
+				if icon:GetTexture() == 236293 then -- interface\icons\ability_warlock_demonicpower
 					icon.b = CreateFrame('Frame', nil, frame)
 					icon.b:SetTemplate()
 					icon.b:SetOutside(icon)
@@ -551,7 +551,7 @@ local function SkinLootWonAlert(frame)
 	lootItem.Icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
 	lootItem.Icon:SetDrawLayer('BORDER')
 	lootItem.IconBorder:Kill()
-	lootItem.SpecRing:SetTexture('')
+	lootItem.SpecRing:SetTexture(E.ClearTexture)
 
 	frame.glow:Kill()
 	frame.shine:Kill()

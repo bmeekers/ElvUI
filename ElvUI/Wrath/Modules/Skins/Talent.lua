@@ -3,7 +3,6 @@ local S = E:GetModule('Skins')
 
 local _G = _G
 local unpack = unpack
-local hooksecurefunc = hooksecurefunc
 
 local MAX_TALENT_TABS = MAX_TALENT_TABS
 
@@ -17,18 +16,12 @@ function S:Blizzard_TalentUI()
 		S:HandleTab(_G['PlayerTalentFrameTab'..i])
 	end
 
-	_G.PlayerTalentFrameRoleButton:ClearAllPoints()
-	_G.PlayerTalentFrameRoleButton:Point('TOPRIGHT', _G.PlayerTalentFrameScrollFrame, 'TOPRIGHT', 0, 0)
-
-	hooksecurefunc('PlayerTalentFrameRole_UpdateRole', function(button)
-		local highlightTexture = button:GetHighlightTexture()
-		highlightTexture:ClearAllPoints()
-		highlightTexture:Point('TOPLEFT', button, 'TOPLEFT', 5, -5)
-		highlightTexture:Point('BOTTOMRIGHT', button, 'BOTTOMRIGHT', -5, 5)
-
-		button:SetHighlightTexture(E.media.normTex)
-		button:SetNormalTexture(E.Media.Textures.RoleIcons)
-	end)
+	-- Reposition Tabs
+	_G.PlayerTalentFrameTab1:ClearAllPoints()
+	_G.PlayerTalentFrameTab1:Point('TOPLEFT', _G.PlayerTalentFrame, 'BOTTOMLEFT', 1, 76)
+	_G.PlayerTalentFrameTab2:Point('TOPLEFT', _G.PlayerTalentFrameTab1, 'TOPRIGHT', -19, 0)
+	_G.PlayerTalentFrameTab3:Point('TOPLEFT', _G.PlayerTalentFrameTab2, 'TOPRIGHT', -19, 0)
+	_G.PlayerTalentFrameTab4:Point('TOPLEFT', _G.PlayerTalentFrameTab3, 'TOPRIGHT', -19, 0)
 
 	for i = 1, MAX_TALENT_TABS do
 		local tab = _G['PlayerSpecTab'..i]
@@ -76,7 +69,7 @@ function S:Blizzard_TalentUI()
 		end
 	end
 
-	-- Talent preview section / SetCVar('previewTalents', 1)
+	-- Talent preview section / E:SetCVar('previewTalents', 1)
 	_G.PlayerTalentFramePreviewBar:StripTextures()
 	_G.PlayerTalentFramePreviewBarFiller:StripTextures()
 
@@ -90,7 +83,6 @@ function S:Blizzard_TalentUI()
 
 	_G.PlayerTalentFramePointsBar:StripTextures()
 end
-S:AddCallbackForAddon('Blizzard_TalentUI')
 
 function S:Blizzard_GlyphUI()
 	if not (E.private.skins.blizzard.enable and E.private.skins.blizzard.talent) then return end
@@ -100,8 +92,8 @@ function S:Blizzard_GlyphUI()
 	_G.GlyphFrameBackground:Size(334, 385)
 	_G.GlyphFrameBackground:Point('TOPLEFT', 15, -47)
 
-	_G.GlyphFrameBackground:SetTexture('Interface\\Spellbook\\UI-GlyphFrame')
-	_G.GlyphFrameGlow:SetTexture('Interface\\Spellbook\\UI-GlyphFrame-Glow')
+	_G.GlyphFrameBackground:SetTexture([[Interface\Spellbook\UI-GlyphFrame]])
+	_G.GlyphFrameGlow:SetTexture([[Interface\Spellbook\UI-GlyphFrame-Glow]])
 	_G.GlyphFrameGlow:SetAllPoints(_G.GlyphFrameBackground)
 
 	_G.GlyphFrameBackground:SetTexCoord(0.041015625, 0.65625, 0.140625, 0.8046875)
@@ -121,4 +113,6 @@ function S:Blizzard_GlyphUI()
 		_G.PlayerTalentFrameScrollFrame:Show()
 	end)
 end
+
+S:AddCallbackForAddon('Blizzard_TalentUI')
 S:AddCallbackForAddon('Blizzard_GlyphUI')

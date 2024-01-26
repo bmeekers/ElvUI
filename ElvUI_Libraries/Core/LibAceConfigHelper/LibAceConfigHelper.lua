@@ -1,12 +1,22 @@
 local LibStub = _G.LibStub
-local MAJOR, MINOR = 'LibAceConfigHelper', 9
+local MAJOR, MINOR = 'LibAceConfigHelper', 11
 local ACH = LibStub:NewLibrary(MAJOR, MINOR)
 local LSM = LibStub('LibSharedMedia-3.0')
 
-local Classic = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
-
 if not ACH then return end
 local type, pairs = type, pairs
+
+ACH.FontValues = {
+	NONE = 'None',
+	OUTLINE = 'Outline',
+	THICKOUTLINE = 'Thick',
+	SHADOW = '|cff888888Shadow|r',
+	SHADOWOUTLINE = '|cff888888Shadow|r Outline',
+	SHADOWTHICKOUTLINE = '|cff888888Shadow|r Thick',
+	MONOCHROME = '|cFFAAAAAAMono|r',
+	MONOCHROMEOUTLINE = '|cFFAAAAAAMono|r Outline',
+	MONOCHROMETHICKOUTLINE = '|cFFAAAAAAMono|r Thick'
+}
 
 local function insertWidth(opt, width)
 	if type(width) == 'number' and width > 5 then
@@ -54,7 +64,7 @@ function ACH:Execute(name, desc, order, func, image, confirm, width, get, set, d
 end
 
 function ACH:Group(name, desc, order, childGroups, get, set, disabled, hidden, func)
-	return { type = 'group', childGroups = childGroups, name = name, desc = desc, order = order, set = set, get = get, hidden = hidden, disabled = disabled, func = func, args = {} }
+	return { type = 'group', childGroups = childGroups, name = name, desc = desc, order = order, set = set, get = get, disabled = disabled, hidden = hidden, func = func, args = {} }
 end
 
 function ACH:Header(name, order, get, set, hidden)
@@ -154,17 +164,8 @@ function ACH:SharedMediaBorder(name, desc, order, width, get, set, disabled, hid
 	return SharedMediaSelect('LSM30_Border', name, desc, order, function() return LSM:HashTable('border') end, width, get, set, disabled, hidden)
 end
 
-local FontFlagValues = {
-	NONE = 'None',
-	OUTLINE = 'Outline',
-	THICKOUTLINE = 'Thick',
-	MONOCHROME = '|cFFAAAAAAMono|r',
-	MONOCHROMEOUTLINE = '|cFFAAAAAAMono|r Outline',
-	MONOCHROMETHICKOUTLINE = '|cFFAAAAAAMono|r Thick',
-}
-
 function ACH:FontFlags(name, desc, order, width, get, set, disabled, hidden)
-	local optionTable = { type = 'select', name = name, desc = desc, order = order, get = get, set = set, disabled = disabled, hidden = hidden, values = FontFlagValues }
+	local optionTable = { type = 'select', name = name, desc = desc, order = order, get = get, set = set, disabled = disabled, hidden = hidden, values = ACH.FontValues, sortByValue = true }
 
 	if width then insertWidth(optionTable, width) end
 

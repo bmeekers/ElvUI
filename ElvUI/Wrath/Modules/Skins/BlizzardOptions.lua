@@ -3,8 +3,8 @@ local S = E:GetModule('Skins')
 
 local _G = _G
 local ipairs, pairs, next = ipairs, pairs, next
-local hooksecurefunc = hooksecurefunc
 
+local hooksecurefunc = hooksecurefunc
 local InCombatLockdown = InCombatLockdown
 
 local function HandlePushToTalkButton(button)
@@ -155,14 +155,14 @@ function S:BlizzardOptions()
 	_G.CombatConfigTab1:ClearAllPoints()
 	_G.CombatConfigTab1:Point('BOTTOMLEFT', _G.ChatConfigBackgroundFrame, 'TOPLEFT', 6, -2)
 
-	_G.ChatConfigChatSettingsClassColorLegend.NineSlice:SetTemplate()
-	_G.ChatConfigChannelSettingsClassColorLegend.NineSlice:SetTemplate()
+	_G.ChatConfigChatSettingsClassColorLegend.NineSlice:SetTemplate('Transparent')
+	_G.ChatConfigChannelSettingsClassColorLegend.NineSlice:SetTemplate('Transparent')
 
 	S:HandleEditBox(_G.CombatConfigSettingsNameEditBox)
 	S:HandleNextPrevButton(_G.ChatConfigMoveFilterUpButton)
 	S:HandleNextPrevButton(_G.ChatConfigMoveFilterDownButton)
-	_G.ChatConfigMoveFilterUpButton:Size(19, 19)
-	_G.ChatConfigMoveFilterDownButton:Size(19, 19)
+	_G.ChatConfigMoveFilterUpButton:Size(19)
+	_G.ChatConfigMoveFilterDownButton:Size(19)
 	_G.ChatConfigMoveFilterUpButton:Point('TOPLEFT', '$parent', 'BOTTOMLEFT', 0, -3)
 	_G.ChatConfigMoveFilterDownButton:Point('LEFT', _G.ChatConfigMoveFilterUpButton, 'RIGHT', 3, 0)
 
@@ -217,6 +217,22 @@ function S:BlizzardOptions()
 		end
 		for index in ipairs(frame.swatchTable) do
 			_G[frame:GetName()..'Swatch'..index]:StripTextures()
+		end
+	end)
+
+	hooksecurefunc('ChatConfig_CreateBoxes', function(frame)
+		local boxName = frame:GetName()..'Box'
+
+		if frame.boxTable then
+			for index in next, frame.boxTable do
+				local box = _G[boxName..index]
+				if box then
+					box.NineSlice:SetTemplate('Transparent')
+					if box.Button then
+						S:HandleButton(box.Button)
+					end
+				end
+			end
 		end
 	end)
 
@@ -279,7 +295,7 @@ function S:BlizzardOptions()
 					S:HandleSliderFrame(Child)
 				elseif Child:IsObjectType('Tab') then
 					S:HandleTab(Child)
-				elseif Child:IsObjectType('Frame') and Child.Left and Child.Middle and Child.Right then
+				elseif Child:IsObjectType('Frame') and (Child.Left and Child.Middle and Child.Right) then
 					S:HandleDropDownBox(Child)
 				end
 			end
@@ -290,7 +306,6 @@ function S:BlizzardOptions()
 	S:HandleButton(_G.InterfaceOptionsFrameTab1)
 	_G.InterfaceOptionsFrameTab2:Point('TOPLEFT', _G.InterfaceOptionsFrameTab1, 'TOPRIGHT', 1, 0)
 	S:HandleButton(_G.InterfaceOptionsFrameTab2)
-	_G.InterfaceOptionsSocialPanel.EnableTwitter.Logo:SetAtlas('WoWShare-TwitterLogo')
 
 	-- Features tab
 	S:HandleCheckBox(_G.InterfaceOptionsFeaturesPanelEquipmentManager)

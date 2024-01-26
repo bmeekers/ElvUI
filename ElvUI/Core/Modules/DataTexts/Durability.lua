@@ -2,14 +2,12 @@ local E, L, V, P, G = unpack(ElvUI)
 local DT = E:GetModule('DataTexts')
 
 local _G = _G
-local select, wipe = select, wipe
-local format, pairs = format, pairs
-local GetInventoryItemDurability = GetInventoryItemDurability
+local format, pairs, wipe = format, pairs, wipe
+
 local ToggleCharacter = ToggleCharacter
-local InCombatLockdown = InCombatLockdown
+local GetInventoryItemDurability = GetInventoryItemDurability
 local GetInventoryItemTexture = GetInventoryItemTexture
 local GetInventoryItemLink = GetInventoryItemLink
-local GetMoneyString = GetMoneyString
 
 local DURABILITY = DURABILITY
 local REPAIR_COST = REPAIR_COST
@@ -42,21 +40,18 @@ local function OnEvent(self)
 	for index in pairs(slots) do
 		local currentDura, maxDura = GetInventoryItemDurability(index)
 		if currentDura and maxDura > 0 then
-			local perc, repairCost = (currentDura/maxDura)*100
+			local perc, repairCost, _ = (currentDura/maxDura)*100
 			invDurability[index] = perc
 
 			if perc < totalDurability then
 				totalDurability = perc
 			end
 
-			if E.Retail and E.ScanTooltip.GetTooltipData then
-				E.ScanTooltip:SetInventoryItem('player', index)
-				E.ScanTooltip:Show()
-
-				local data = E.ScanTooltip:GetTooltipData()
+			if E.Retail then
+				local data = E.ScanTooltip:GetInventoryInfo('player', index)
 				repairCost = data and data.repairCost
 			else
-				repairCost = select(3, E.ScanTooltip:SetInventoryItem('player', index))
+				_, _, repairCost = E.ScanTooltip:SetInventoryItem('player', index)
 			end
 
 			totalRepairCost = totalRepairCost + (repairCost or 0)
@@ -80,8 +75,9 @@ local function OnEvent(self)
 end
 
 local function Click()
-	if InCombatLockdown() then _G.UIErrorsFrame:AddMessage(E.InfoColor.._G.ERR_NOT_IN_COMBAT) return end
-	ToggleCharacter('PaperDollFrame')
+	if not E:AlertCombat() then
+		ToggleCharacter('PaperDollFrame')
+	end
 end
 
 local function OnEnter()
@@ -93,7 +89,7 @@ local function OnEnter()
 
 	if totalRepairCost > 0 then
 		DT.tooltip:AddLine(' ')
-		DT.tooltip:AddDoubleLine(REPAIR_COST, GetMoneyString(totalRepairCost), .6, .8, 1, 1, 1, 1)
+		DT.tooltip:AddDoubleLine(REPAIR_COST, E:FormatMoney(totalRepairCost, db.goldFormat or 'BLIZZARD', not db.goldCoins), .6, .8, 1, 1, 1, 1)
 	end
 
 	DT.tooltip:Show()

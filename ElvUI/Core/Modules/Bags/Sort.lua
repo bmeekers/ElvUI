@@ -22,8 +22,8 @@ local SplitGuildBankItem = SplitGuildBankItem
 
 local ITEMQUALITY_POOR = Enum.ItemQuality.Poor
 local NUM_BAG_SLOTS = NUM_BAG_SLOTS + (E.Retail and 1 or 0) -- add the profession bag
-local BANK_CONTAINER = BANK_CONTAINER
-local REAGENT_CONTAINER = E.Retail and 5 or math.huge -- impossible id to prevent code on classic
+local BANK_CONTAINER = Enum.BagIndex.Bank
+local REAGENT_CONTAINER = E.Retail and Enum.BagIndex.ReagentBag or math.huge
 
 local BagSlotFlags = Enum.BagSlotFlags
 local FILTER_FLAG_TRADE_GOODS = LE_BAG_FILTER_FLAG_TRADE_GOODS or BagSlotFlags.PriorityTradeGoods
@@ -604,12 +604,14 @@ function B:CanItemGoInBag(bag, slot, targetBag)
 		end
 	end
 
-	local itemFamily = (equipSlot == 'INVTYPE_BAG' and 1) or GetItemFamily(item)
-	if itemFamily then
-		local _, bagFamily = GetContainerNumFreeSlots(targetBag)
-		return (bagFamily == 0) or band(itemFamily, bagFamily) > 0
-	else
-		return false
+	local _, bagType = GetContainerNumFreeSlots(targetBag)
+	if bagType == 0 then
+		return true -- target bag is normal
+	elseif bagType then
+		local itemFamily = GetItemFamily(item)
+		if itemFamily then
+			return band(itemFamily, bagType) > 0
+		end
 	end
 end
 
@@ -866,6 +868,10 @@ function B:RegisterUpdateDelayed()
 
 			B:UpdateAllSlots(bagFrame)
 			B:SetListeners(bagFrame)
+
+			if bagFrame.spinnerIcon then
+				E:StopSpinner(bagFrame.spinnerIcon)
+			end
 		end
 	end
 

@@ -1,12 +1,14 @@
 local print, strmatch, strlower = print, strmatch, strlower
 local _G, UNKNOWN, format, type, next = _G, UNKNOWN, format, type, next
 
-local LoadAddOn = LoadAddOn
-local GetAddOnInfo = GetAddOnInfo
 local SlashCmdList = SlashCmdList
 local GetMouseFocus = GetMouseFocus
-local IsAddOnLoaded = IsAddOnLoaded
 local UIParentLoadAddOn = UIParentLoadAddOn
+
+local GetAddOnInfo = (C_AddOns and C_AddOns.GetAddOnInfo) or GetAddOnInfo
+local IsAddOnLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+local LoadAddOn = (C_AddOns and C_AddOns.LoadAddOn) or LoadAddOn
+
 -- GLOBALS: ElvUI_CPU, ElvUI
 
 local function GetName(frame, text)
@@ -44,7 +46,7 @@ AddCommand('DEVCON', '/devcon', function()
 	end
 end)
 
--- /rl, /reloadui, /reload  NOTE: /reload is from SLASH_RELOAD
+-- /rl, /reloadui, /reload NOTE: /reload is from SLASH_RELOAD
 AddCommand('RELOADUI', {'/rl','/reloadui'}, _G.ReloadUI)
 
 AddCommand('GETPOINT', '/getpoint', function(arg)

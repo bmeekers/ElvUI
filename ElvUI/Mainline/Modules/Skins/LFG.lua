@@ -4,18 +4,14 @@ local LCG = E.Libs.CustomGlow
 
 local _G = _G
 local next = next
+local min, select = min, select
 local unpack, ipairs, pairs = unpack, ipairs, pairs
-local min, strlower, select = min, strlower, select
 local hooksecurefunc = hooksecurefunc
 
 local GetItemInfo = GetItemInfo
-local GetLFGProposal = GetLFGProposal
 local UnitIsGroupLeader = UnitIsGroupLeader
-local GetLFGProposalMember = GetLFGProposalMember
-local GetBackgroundTexCoordsForRole = GetBackgroundTexCoordsForRole
 
 local C_ChallengeMode_GetAffixInfo = C_ChallengeMode.GetAffixInfo
-local C_LFGList_GetApplicationInfo = C_LFGList.GetApplicationInfo
 local C_LFGList_GetAvailableActivities = C_LFGList.GetAvailableActivities
 local C_LFGList_GetAvailableRoles = C_LFGList.GetAvailableRoles
 local C_MythicPlus_GetCurrentAffixes = C_MythicPlus.GetCurrentAffixes
@@ -30,12 +26,6 @@ end
 
 local function LFDQueueFrameRoleButtonIconOnHide(self)
 	LCG.HideOverlayGlow(self:GetParent().checkButton)
-end
-
-local function ClearSetTexture(texture, tex)
-	if tex ~= nil then
-		texture:SetTexture()
-	end
 end
 
 local function HandleGoldIcon(button)
@@ -92,11 +82,6 @@ local function SkinItemButton(parentFrame, _, index)
 	end
 end
 
-local function SetRoleIcon(self, resultID)
-	local _,_,_,_, role = C_LFGList_GetApplicationInfo(resultID)
-	self.RoleIcon:SetTexCoord(GetBackgroundTexCoordsForRole(role))
-end
-
 local function HandleAffixIcons(self)
 	local MapID, _, PowerLevel = C_ChallengeMode_GetSlottedKeystoneInfo()
 
@@ -110,7 +95,10 @@ local function HandleAffixIcons(self)
 		self.PowerLevel:SetText('')
 	end
 
-	for _, frame in ipairs(self.Affixes) do
+	local list = self.AffixesContainer and self.AffixesContainer.Affixes or self.Affixes
+	if not list then return end
+
+	for _, frame in ipairs(list) do
 		frame.Border:SetTexture()
 		frame.Portrait:SetTexture()
 
@@ -127,21 +115,6 @@ local function HandleAffixIcons(self)
 	end
 end
 
-local function DungeonReadyStatus_UpdateIcon(button, role)
-	if not role then role = select(2, GetLFGProposalMember(button:GetID())) end
-
-	button.texture:SetTexture(E.Media.Textures.RolesHQ)
-	button.texture:SetAlpha(0.6)
-
-	if role == 'DAMAGER' then
-		button.texture:SetTexCoord(_G.LFDQueueFrameRoleButtonDPS.background:GetTexCoord())
-	elseif role == 'TANK' then
-		button.texture:SetTexCoord(_G.LFDQueueFrameRoleButtonTank.background:GetTexCoord())
-	elseif role == 'HEALER' then
-		button.texture:SetTexCoord(_G.LFDQueueFrameRoleButtonHealer.background:GetTexCoord())
-	end
-end
-
 function S:LookingForGroupFrames()
 	if not (E.private.skins.blizzard.enable and E.private.skins.blizzard.lfg) then return end
 
@@ -155,56 +128,20 @@ function S:LookingForGroupFrames()
 	S:HandleButton(_G.LFDQueueFramePartyBackfillBackfillButton)
 	S:HandleButton(_G.LFDQueueFramePartyBackfillNoBackfillButton)
 
-	_G.GroupFinderFrame.groupButton1.icon:SetTexture(133076) -- interface/icons/inv_helmet_08.blp
-	_G.GroupFinderFrame.groupButton2.icon:SetTexture(133074) -- interface/icons/inv_helmet_06.blp
-	_G.GroupFinderFrame.groupButton3.icon:SetTexture(464820) -- interface/icons/achievement_general_stayclassy.blp
+	_G.GroupFinderFrame.groupButton1.icon:SetTexture(133076) -- interface\icons\inv_helmet_08.blp
+	_G.GroupFinderFrame.groupButton2.icon:SetTexture(133074) -- interface\icons\inv_helmet_06.blp
+	_G.GroupFinderFrame.groupButton3.icon:SetTexture(464820) -- interface\icons\achievement_general_stayclassy.blp
 
-	S:HandleButton(_G.LFGDungeonReadyDialogEnterDungeonButton)
-	S:HandleButton(_G.LFGDungeonReadyDialogLeaveQueueButton)
-	S:HandleCloseButton(_G.LFGDungeonReadyDialogCloseButton)
-	_G.LFGDungeonReadyDialogEnterDungeonButton:ClearAllPoints()
-	_G.LFGDungeonReadyDialogEnterDungeonButton:Point('BOTTOMRIGHT', _G.LFGDungeonReadyDialog, 'BOTTOM', -10, 15)
-	_G.LFGDungeonReadyDialogLeaveQueueButton:ClearAllPoints()
-	_G.LFGDungeonReadyDialogLeaveQueueButton:Point('BOTTOMLEFT', _G.LFGDungeonReadyDialog, 'BOTTOM', 10, 15)
-	_G.LFGDungeonReadyDialogRoleIconTexture:SetTexture(E.Media.Textures.RolesHQ)
-	_G.LFGDungeonReadyDialogRoleIconTexture:SetAlpha(0.5)
 	_G.LFGDungeonReadyStatus:StripTextures()
 	_G.LFGDungeonReadyStatus:SetTemplate('Transparent')
-	_G.LFGDungeonReadyDialogBackground:SetInside()
-	_G.LFGDungeonReadyDialogBackground:Point('BOTTOMRIGHT', -E.Border, 50)
+
+	S:HandleCloseButton(_G.LFGDungeonReadyDialogCloseButton)
+	S:SkinReadyDialog(_G.LFGDungeonReadyDialog)
 
 	-- Brawl & Solo Shuffle
 	_G.ReadyStatus:StripTextures()
 	_G.ReadyStatus:SetTemplate('Transparent')
 	S:HandleCloseButton(_G.ReadyStatus.CloseButton)
-
-	-- Artwork background (1)
-	_G.LFGDungeonReadyDialog:CreateBackdrop('Transparent', nil, nil, nil, nil, nil, nil, nil, true)
-	_G.LFGDungeonReadyDialog.backdrop:SetOutside(_G.LFGDungeonReadyDialogBackground)
-	_G.LFGDungeonReadyDialog.backdrop.Center:Hide()
-
-	hooksecurefunc('LFGDungeonReadyPopup_Update', function()
-		if _G.LFGDungeonReadyDialog:IsShown() then
-			_G.LFGDungeonReadyDialog:SetTemplate('Transparent') -- Frame background (2)
-			_G.LFGDungeonReadyDialog.bottomArt:Hide()
-			_G.LFGDungeonReadyDialog.filigree:Hide()
-			_G.LFGDungeonReadyDialog.Border:Hide()
-		end
-
-		if _G.LFGDungeonReadyDialogRoleIcon:IsShown() then
-			local _, _, _, _, _, _, role = GetLFGProposal()
-			if role == 'DAMAGER' then
-				_G.LFGDungeonReadyDialogRoleIconTexture:SetTexCoord(_G.LFDQueueFrameRoleButtonDPS.background:GetTexCoord())
-			elseif role == 'TANK' then
-				_G.LFGDungeonReadyDialogRoleIconTexture:SetTexCoord(_G.LFDQueueFrameRoleButtonTank.background:GetTexCoord())
-			elseif role == 'HEALER' then
-				_G.LFGDungeonReadyDialogRoleIconTexture:SetTexCoord(_G.LFDQueueFrameRoleButtonHealer.background:GetTexCoord())
-			end
-		end
-	end)
-
-	hooksecurefunc('LFGDungeonReadyStatusIndividual_UpdateIcon', DungeonReadyStatus_UpdateIcon)
-	hooksecurefunc('LFGDungeonReadyStatusGrouped_UpdateIcon', DungeonReadyStatus_UpdateIcon)
 
 	_G.LFDQueueFrame:StripTextures(true)
 	_G.LFDQueueFrameRoleButtonTankIncentiveIcon:SetAlpha(0)
@@ -221,6 +158,11 @@ function S:LookingForGroupFrames()
 	_G.LFDQueueFrameRoleButtonHealer.shortageBorder:Kill()
 	S:HandleCloseButton(_G.LFGDungeonReadyStatusCloseButton)
 
+	-- Role check popup
+	S:HandleFrame(_G.RolePollPopup)
+	S:HandleButton(_G.RolePollPopupAcceptButton)
+	S:HandleCloseButton(_G.RolePollPopupCloseButton)
+
 	for _, roleButton in pairs({
 		_G.LFDQueueFrameRoleButtonHealer,
 		_G.LFDQueueFrameRoleButtonDPS,
@@ -236,32 +178,20 @@ function S:LookingForGroupFrames()
 		_G.LFGListApplicationDialog.TankButton,
 		_G.LFGListApplicationDialog.HealerButton,
 		_G.LFGListApplicationDialog.DamagerButton,
+
+		-- these three arent scaled to 0.7
 		_G.RolePollPopupRoleButtonTank,
 		_G.RolePollPopupRoleButtonHealer,
 		_G.RolePollPopupRoleButtonDPS,
 	}) do
 		local checkButton = roleButton.checkButton or roleButton.CheckButton
+		if checkButton:GetScale() ~= 1 then
+			checkButton:SetScale(1)
+		end
 
 		S:HandleCheckBox(checkButton, nil, nil, true)
 		checkButton.backdrop:SetInside()
-		checkButton:Size(20)
-
-		roleButton:DisableDrawLayer('ARTWORK')
-		roleButton:DisableDrawLayer('OVERLAY')
-
-		if not roleButton.background then
-			local isLeader = roleButton:GetName() ~= nil and roleButton:GetName():find('Leader') or false
-			if not isLeader then
-				roleButton.background = roleButton:CreateTexture(nil, 'BACKGROUND')
-				roleButton.background:Size(80, 80)
-				roleButton.background:Point('CENTER')
-				roleButton.background:SetTexture(E.Media.Textures.RolesHQ)
-				roleButton.background:SetAlpha(0.65)
-
-				local buttonName = roleButton:GetName() ~= nil and roleButton:GetName() or roleButton.role
-				roleButton.background:SetTexCoord(GetBackgroundTexCoordsForRole((strlower(buttonName):find('tank') and 'TANK') or (strlower(buttonName):find('healer') and 'HEALER') or 'DAMAGER'))
-			end
-		end
+		checkButton:Size(18)
 	end
 
 	hooksecurefunc('SetCheckButtonIsRadio', function(button)
@@ -312,24 +242,6 @@ function S:LookingForGroupFrames()
 		end
 	end)
 
-	_G.LFDQueueFrameRoleButtonLeader.leadIcon = _G.LFDQueueFrameRoleButtonLeader:CreateTexture(nil, 'BACKGROUND')
-	_G.LFDQueueFrameRoleButtonLeader.leadIcon:SetTexture(E.Media.Textures.LeaderHQ)
-	_G.LFDQueueFrameRoleButtonLeader.leadIcon:Point(_G.LFDQueueFrameRoleButtonLeader:GetNormalTexture():GetPoint(), -14, 16)
-	_G.LFDQueueFrameRoleButtonLeader.leadIcon:Size(80)
-	_G.LFDQueueFrameRoleButtonLeader.leadIcon:SetAlpha(0.6)
-	_G.LFDQueueFrameRoleButtonTankBackground:SetTexture(E.Media.Textures.RolesHQ)
-	_G.LFDQueueFrameRoleButtonHealerBackground:SetTexture(E.Media.Textures.RolesHQ)
-	_G.LFDQueueFrameRoleButtonDPSBackground:SetTexture(E.Media.Textures.RolesHQ)
-
-	_G.RaidFinderQueueFrameRoleButtonLeader.leadIcon = _G.RaidFinderQueueFrameRoleButtonLeader:CreateTexture(nil, 'BACKGROUND')
-	_G.RaidFinderQueueFrameRoleButtonLeader.leadIcon:SetTexture(E.Media.Textures.LeaderHQ)
-	_G.RaidFinderQueueFrameRoleButtonLeader.leadIcon:Point(_G.RaidFinderQueueFrameRoleButtonLeader:GetNormalTexture():GetPoint(), -14, 16)
-	_G.RaidFinderQueueFrameRoleButtonLeader.leadIcon:Size(80)
-	_G.RaidFinderQueueFrameRoleButtonLeader.leadIcon:SetAlpha(0.6)
-	_G.RaidFinderQueueFrameRoleButtonTankBackground:SetTexture(E.Media.Textures.RolesHQ)
-	_G.RaidFinderQueueFrameRoleButtonHealerBackground:SetTexture(E.Media.Textures.RolesHQ)
-	_G.RaidFinderQueueFrameRoleButtonDPSBackground:SetTexture(E.Media.Textures.RolesHQ)
-
 	hooksecurefunc('LFG_DisableRoleButton', function(button)
 		button.checkButton:SetAlpha(button.checkButton:GetChecked() and 1 or 0)
 
@@ -375,6 +287,7 @@ function S:LookingForGroupFrames()
 
 	-- Raid finder
 	S:HandleButton(_G.LFDQueueFrameFindGroupButton)
+	S:HandleTrimScrollBar(_G.LFDQueueFrameRandomScrollFrame.ScrollBar)
 
 	_G.LFDParentFrame:StripTextures()
 	_G.LFDParentFrameInset:StripTextures()
@@ -479,9 +392,6 @@ function S:LookingForGroupFrames()
 	S:HandleButton(_G.LFGListInviteDialog.AcknowledgeButton)
 	S:HandleButton(_G.LFGListInviteDialog.AcceptButton)
 	S:HandleButton(_G.LFGListInviteDialog.DeclineButton)
-	_G.LFGListInviteDialog.RoleIcon:SetTexture(E.Media.Textures.RolesHQ)
-
-	hooksecurefunc('LFGListInviteDialog_Show', SetRoleIcon)
 
 	S:HandleEditBox(LFGListFrame.SearchPanel.SearchBox)
 	S:HandleButton(LFGListFrame.SearchPanel.BackButton)
@@ -578,7 +488,7 @@ function S:LookingForGroupFrames()
 	LFGListFrame.ApplicationViewer.PrivateGroup:FontTemplate()
 
 	S:HandleButton(LFGListFrame.ApplicationViewer.RefreshButton)
-	LFGListFrame.ApplicationViewer.RefreshButton:Size(24, 24)
+	LFGListFrame.ApplicationViewer.RefreshButton:Size(24)
 	LFGListFrame.ApplicationViewer.RefreshButton:ClearAllPoints()
 	LFGListFrame.ApplicationViewer.RefreshButton:Point('BOTTOMRIGHT', LFGListFrame.ApplicationViewer.Inset, 'TOPRIGHT', 16, 4)
 
@@ -672,7 +582,7 @@ function S:Blizzard_ChallengesUI()
 		end
 	end)
 
-	hooksecurefunc(ChallengesFrame.WeeklyInfo, 'SetUp', function(info)
+	hooksecurefunc(_G.ChallengesFrameWeeklyInfoMixin, 'SetUp', function(info)
 		if C_MythicPlus_GetCurrentAffixes() then
 			HandleAffixIcons(info.Child)
 		end

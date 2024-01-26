@@ -2,11 +2,14 @@ local E, L, V, P, G = unpack(ElvUI)
 local S = E:GetModule('Skins')
 
 local _G = _G
-local GetNumAddOns = GetNumAddOns
-local GetAddOnInfo = GetAddOnInfo
-local GetAddOnEnableState = GetAddOnEnableState
-local UIDropDownMenu_GetSelectedValue = UIDropDownMenu_GetSelectedValue
+local unpack = unpack
 local hooksecurefunc = hooksecurefunc
+
+local UIDropDownMenu_GetSelectedValue = UIDropDownMenu_GetSelectedValue
+
+local GetAddOnEnableState = C_AddOns and C_AddOns.GetAddOnEnableState
+local GetAddOnInfo = C_AddOns and C_AddOns.GetAddOnInfo
+local GetNumAddOns = C_AddOns and C_AddOns.GetNumAddOns
 
 function S:AddonList()
 	if not (E.private.skins.blizzard.enable and E.private.skins.blizzard.addonManager) then return end
@@ -24,7 +27,7 @@ function S:AddonList()
 	S:HandleScrollBar(_G.AddonListScrollFrameScrollBar)
 	S:HandleCheckBox(_G.AddonListForceLoad)
 
-	_G.AddonListForceLoad:Size(26, 26)
+	_G.AddonListForceLoad:Size(26)
 
 	S:HandleFrame(_G.AddonListScrollFrame, true, nil, -14, 0, 0, -1)
 
@@ -33,14 +36,13 @@ function S:AddonList()
 		S:HandleButton(_G['AddonListEntry'..i].LoadAddonButton)
 	end
 
-	local font = E.Libs.LSM:Fetch('font', 'Expressway')
 	hooksecurefunc('AddonList_Update', function()
 		local numEntrys = GetNumAddOns()
 		for i = 1, maxShown do
 			local index = AddonList.offset + i
 			if index <= numEntrys then
 				local entry = _G['AddonListEntry'..i]
-				local string = _G['AddonListEntry'..i..'Title']
+				local entryTitle = _G['AddonListEntry'..i..'Title']
 				local checkbox = _G['AddonListEntry'..i..'Enabled']
 				local name, title, _, loadable, reason = GetAddOnInfo(index)
 
@@ -50,17 +52,17 @@ function S:AddonList()
 				if character == true then
 					character = nil
 				else
-					checkall = GetAddOnEnableState(nil, index)
+					checkall = GetAddOnEnableState(index)
 				end
 
-				local checkstate = GetAddOnEnableState(character, index)
+				local checkstate = GetAddOnEnableState(index, character)
 				local enabled = checkstate > 0
 
-				string:FontTemplate(font, 13, 'NONE')
-				entry.Status:FontTemplate(font, 11, 'NONE')
-				entry.Reload:FontTemplate(font, 11, 'NONE')
+				entryTitle:SetFontObject('ElvUIFontNormal')
+				entry.Status:SetFontObject('ElvUIFontSmall')
+				entry.Reload:SetFontObject('ElvUIFontSmall')
 				entry.Reload:SetTextColor(1.0, 0.3, 0.3)
-				entry.LoadAddonButton.Text:FontTemplate(font, 11, 'NONE')
+				entry.LoadAddonButton.Text:SetFontObject('ElvUIFontSmall')
 
 				local enabledForSome = not character and checkstate == 1
 				local disabled = not enabled or enabledForSome
@@ -72,26 +74,34 @@ function S:AddonList()
 				end
 
 				if disabled or reason == 'DEP_DISABLED' then
-					string:SetText(E:StripString(title or name, true))
+					entryTitle:SetText(E:StripString(title or name, true))
 				end
 
 				if enabledForSome then
-					string:SetTextColor(0.5, 0.5, 0.5)
+					entryTitle:SetTextColor(0.5, 0.5, 0.5)
 				elseif enabled and (loadable or reason == 'DEP_DEMAND_LOADED' or reason == 'DEMAND_LOADED') then
-					string:SetTextColor(0.9, 0.9, 0.9)
+					entryTitle:SetTextColor(0.9, 0.9, 0.9)
 				elseif enabled and reason ~= 'DEP_DISABLED' then
-					string:SetTextColor(1.0, 0.2, 0.2)
+					entryTitle:SetTextColor(1.0, 0.2, 0.2)
 				else
-					string:SetTextColor(0.3, 0.3, 0.3)
+					entryTitle:SetTextColor(0.3, 0.3, 0.3)
 				end
 
 				local checktex = checkbox:GetCheckedTexture()
 				if not enabled and checkall == 1 then
 					checktex:SetVertexColor(0.3, 0.3, 0.3)
+					checktex:SetDesaturated(true)
+					checktex:Show()
+				elseif not checkstate or checkstate == 0 then
+					checktex:Hide()
+				elseif checkstate == 1 or reason == 'DEP_DISABLED' then
+					checktex:SetVertexColor(0.6, 0.6, 0.6)
+					checktex:SetDesaturated(true)
+					checktex:Show()
+				elseif checkstate == 2 then
+					checktex:SetVertexColor(unpack(E.media.rgbvaluecolor))
 					checktex:SetDesaturated(false)
 					checktex:Show()
-				elseif checkstate == 0 then
-					checktex:Hide()
 				end
 			end
 		end

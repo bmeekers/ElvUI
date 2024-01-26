@@ -5,29 +5,31 @@ local LSM = E.Libs.LSM
 local ElvUF = E.oUF
 
 local _G = _G
-local wipe, type, select, unpack, assert, tostring = wipe, type, select, unpack, assert, tostring
+local hooksecurefunc = hooksecurefunc
+local wipe, type, unpack, assert, tostring = wipe, type, unpack, assert, tostring
 local huge, strfind, gsub, format, strjoin, strmatch = math.huge, strfind, gsub, format, strjoin, strmatch
 local pcall, min, next, pairs, ipairs, tinsert, strsub = pcall, min, next, pairs, ipairs, tinsert, strsub
 
+local CreateFrame = CreateFrame
+local PlaySound = PlaySound
+local UIParent = UIParent
+local UnitExists = UnitExists
+local UnitGUID = UnitGUID
+local UnitIsEnemy = UnitIsEnemy
+local UnitIsFriend = UnitIsFriend
+local GetInstanceInfo = GetInstanceInfo
+local RegisterStateDriver = RegisterStateDriver
+local UnregisterStateDriver = UnregisterStateDriver
+
+local UnitFrame_OnEnter = UnitFrame_OnEnter
+local UnitFrame_OnLeave = UnitFrame_OnLeave
 local CastingBarFrame_OnLoad = CastingBarFrame_OnLoad
 local CastingBarFrame_SetUnit = CastingBarFrame_SetUnit
 local PetCastingBarFrame_OnLoad = PetCastingBarFrame_OnLoad
 local CompactRaidFrameManager_SetSetting = CompactRaidFrameManager_SetSetting
 
-local CreateFrame = CreateFrame
-local GetInstanceInfo = GetInstanceInfo
-local hooksecurefunc = hooksecurefunc
+local IsAddOnLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
 local IsReplacingUnit = IsReplacingUnit or C_PlayerInteractionManager.IsReplacingUnit
-local IsAddOnLoaded = IsAddOnLoaded
-local RegisterStateDriver = RegisterStateDriver
-local UnitExists = UnitExists
-local UnitIsEnemy = UnitIsEnemy
-local UnitIsFriend = UnitIsFriend
-local UnitFrame_OnEnter = UnitFrame_OnEnter
-local UnitFrame_OnLeave = UnitFrame_OnLeave
-local UnregisterStateDriver = UnregisterStateDriver
-local PlaySound = PlaySound
-local UnitGUID = UnitGUID
 
 local SELECT_AGGRO = SOUNDKIT.IG_CREATURE_AGGRO_SELECT
 local SELECT_NPC = SOUNDKIT.IG_CHARACTER_NPC_SELECT
@@ -254,6 +256,7 @@ function UF:CreateRaisedElement(frame, bar)
 
 	-- layer levels (level +1 is icons)
 	raised.AuraLevel = level
+	raised.PVPSpecLevel = level + 5
 	raised.AuraBarLevel = level + 10
 	raised.RaidDebuffLevel = level + 15
 	raised.AuraWatchLevel = level + 20
@@ -544,13 +547,36 @@ function UF:Construct_Fader()
 	return { UpdateRange = UF.UpdateRange }
 end
 
-do
-	local instanceDifficultly = {}
-	local function addInstanceDifficultly(...)
-		for i = 1, select('#', ...) do
-			local val = select(i, ...)
-			instanceDifficultly[val] = true
+do -- IDs maintained in Difficulty Datatext and Nameplate StyleFilters
+	local diffs = {
+		keys = {
+			none = {0},
+			dungeonNormal = {1, 38, 173, 201},
+			dungeonHeroic = {2, 39, 174},
+			dungeonMythic = {23, 40},
+			dungeonMythicKeystone = {8},
+			raidNormal = {3, 4, 14, 148, 175, 176, 185, 186}, -- 148 is ZG/AQ40
+			raidHeroic = {5, 6, 15, 193, 194},
+			raidMythic = {16},
+		}
+	}
+
+	local function HandleDifficulties(fader, db)
+		if not diffs[fader] then
+			diffs[fader] = {}
+		else
+			wipe(diffs[fader])
 		end
+
+		for key, ids in next, diffs.keys do
+			if db.instanceDifficulties[key] then
+				for _, val in next, ids do
+					diffs[fader][val] = true
+				end
+			end
+		end
+
+		return next(diffs[fader]) and diffs[fader] or nil
 	end
 
 	function UF:Configure_Fader(frame)
@@ -571,6 +597,7 @@ do
 			fader:SetOption('Casting', db.casting)
 			fader:SetOption('MinAlpha', db.minAlpha)
 			fader:SetOption('MaxAlpha', db.maxAlpha)
+			fader:SetOption('DynamicFlight', db.dynamicflight)
 
 			if frame ~= _G.ElvUF_Player then
 				fader:SetOption('Range', db.range)
@@ -579,16 +606,7 @@ do
 
 			fader:SetOption('Smooth', (db.smooth > 0 and db.smooth) or nil)
 			fader:SetOption('Delay', (db.delay > 0 and db.delay) or nil)
-
-			wipe(instanceDifficultly)
-			if db.instanceDifficulties.dungeonNormal then addInstanceDifficultly(1) end
-			if db.instanceDifficulties.dungeonHeroic then addInstanceDifficultly(2) end
-			if db.instanceDifficulties.dungeonMythic then addInstanceDifficultly(23) end
-			if db.instanceDifficulties.dungeonMythicKeystone then addInstanceDifficultly(8) end
-			if db.instanceDifficulties.raidNormal then addInstanceDifficultly(3, 4, 14) end
-			if db.instanceDifficulties.raidHeroic then addInstanceDifficultly(5, 6, 15) end
-			if db.instanceDifficulties.raidMythic then addInstanceDifficultly(16) end
-			fader:SetOption('InstanceDifficulty', next(instanceDifficultly) and instanceDifficultly or nil)
+			fader:SetOption('InstanceDifficulty', HandleDifficulties(fader, db))
 
 			fader:ClearTimers()
 			fader.configTimer = E:ScheduleTimer(fader.ForceUpdate, 0.25, fader, true)
@@ -668,7 +686,7 @@ function UF:CreateAndUpdateUFGroup(group, numGroup)
 			UF.groupunits[unit] = group -- keep above spawn, it's required
 
 			local frameName = gsub(E:StringTitle(unit), 't(arget)', 'T%1')
-			frame = ElvUF:Spawn(unit, 'ElvUF_'..frameName)
+			frame = ElvUF:Spawn(unit, 'ElvUF_'..frameName, 'SecureUnitButtonTemplate')
 			frame:SetID(i)
 			frame.index = i
 
@@ -708,7 +726,6 @@ function UF:SetHeaderSortGroup(group, groupBy)
 end
 
 --Keep an eye on this one, it may need to be changed too
---Reference: http://www.tukui.org/forums/topic.php?id=35332
 function UF.groupPrototype:GetAttribute(name)
 	return self.groups[1]:GetAttribute(name)
 end
@@ -834,6 +851,28 @@ function UF.groupPrototype:Configure_Groups(Header)
 	Header:SetSize(width - horizontalSpacing - groupSpacing, height - verticalSpacing - groupSpacing)
 end
 
+function UF.headerPrototype:ExecuteForChildren(method, func, ...)
+	local i = 1
+	local child = self:GetAttribute('child'..i)
+	while child do
+		if func then
+			func(child, i, ...)
+		else
+			local methodFunc = method and child[method]
+			if methodFunc then
+				methodFunc(child, ...)
+			end
+		end
+
+		i = i + 1
+		child = self:GetAttribute('child'..i)
+	end
+end
+
+function UF.headerPrototype:ClearChildPoints()
+	self:ExecuteForChildren('ClearAllPoints')
+end
+
 function UF.groupPrototype:Update(Header)
 	local db = UF.db.units[Header.groupName]
 
@@ -854,7 +893,7 @@ function UF.groupPrototype:AdjustVisibility(Header)
 			elseif group.forceShow then
 				group:Hide()
 				group:SetAttribute('startingIndex', 1)
-				UF:UnshowChildUnits(group, group:GetChildren())
+				UF:UnshowChildUnits(group)
 			else
 				group:Reset()
 			end
@@ -862,22 +901,20 @@ function UF.groupPrototype:AdjustVisibility(Header)
 	end
 end
 
-function UF.headerPrototype:ClearChildPoints()
-	for _, child in pairs({ self:GetChildren() }) do
-		child:ClearAllPoints()
+function UF.headerPrototype:UpdateChild(index, header, func, db)
+	func(UF, self, db) -- self is child
+
+	local name = self:GetName()
+
+	local target = _G[name..'Target']
+	if target then
+		func(UF, target, db)
 	end
-end
 
-function UF.headerPrototype:UpdateChild(func, child, db)
-	func(UF, child, db)
-
-	local name = child:GetName()
-
-	local target = name..'Target'
-	if _G[target] then func(UF, _G[target], db) end
-
-	local pet = name..'Pet'
-	if _G[pet] then func(UF, _G[pet], db) end
+	local pet = _G[name..'Pet']
+	if pet then
+		func(UF, pet, db)
+	end
 end
 
 function UF.headerPrototype:Update(isForced)
@@ -885,16 +922,7 @@ function UF.headerPrototype:Update(isForced)
 
 	UF[self.UpdateHeader](UF, self, db, isForced)
 
-	local i = 1
-	local child = self:GetAttribute('child'..i)
-	local func = UF[self.UpdateFrames]
-
-	while child do
-		self:UpdateChild(func, child, db)
-
-		i = i + 1
-		child = self:GetAttribute('child'..i)
-	end
+	self:ExecuteForChildren(nil, self.UpdateChild, self, UF[self.UpdateFrames], db)
 end
 
 function UF.headerPrototype:Reset()
@@ -1043,13 +1071,11 @@ function UF:CreateAndUpdateHeaderGroup(group, groupFilter, template, headerTempl
 			groupFunctions:AdjustVisibility(Header)
 			groupFunctions:Configure_Groups(Header)
 		end
-	elseif not groupFunctions.Update then
+	elseif not groupFunctions.Update then -- tank / assist
 		groupFunctions.Update = function(_, header)
 			UF[header.UpdateHeader](UF, header, header.db)
 
-			for _, child in ipairs({ header:GetChildren() }) do
-				header:UpdateChild(UF[header.UpdateFrames], child, header.db)
-			end
+			header:ExecuteForChildren(nil, header.UpdateChild, header, UF[header.UpdateFrames], header.db)
 		end
 	end
 
@@ -1079,7 +1105,7 @@ function UF:CreateAndUpdateUF(unit)
 	local frameName = gsub(E:StringTitle(unit), 't(arget)', 'T%1')
 	local frame = UF[unit]
 	if not frame then
-		frame = ElvUF:Spawn(unit, 'ElvUF_'..frameName)
+		frame = ElvUF:Spawn(unit, 'ElvUF_'..frameName, 'SecureUnitButtonTemplate')
 
 		UF.units[unit] = frame
 		UF[unit] = frame
@@ -1158,7 +1184,7 @@ end
 
 do
 	local function EventlessUpdate(frame, elapsed)
-		if not frame.unit or not UnitExists(frame.unit) then
+		if not frame.unit or not UnitExists(frame.unit) or not frame.__eventless then
 			return
 		else
 			local frequency = frame.elapsed or 0
@@ -1261,6 +1287,10 @@ do
 		tinsert(DisabledElements, frame.castBar or frame.spellbar or nil)
 		tinsert(DisabledElements, frame.petFrame or frame.PetFrame or nil)
 		tinsert(DisabledElements, frame.powerBarAlt or frame.PowerBarAlt or nil)
+		tinsert(DisabledElements, frame.CastingBarFrame or nil)
+		tinsert(DisabledElements, frame.CcRemoverFrame or nil)
+		tinsert(DisabledElements, frame.classPowerBar or nil)
+		tinsert(DisabledElements, frame.DebuffFrame or nil)
 		tinsert(DisabledElements, frame.BuffFrame or nil)
 		tinsert(DisabledElements, frame.totFrame or nil)
 
@@ -1302,7 +1332,7 @@ do
 		if disable.party or disable.raid then
 			-- calls to UpdateRaidAndPartyFrames, which as of writing this is used to show/hide the
 			-- Raid Utility and update Party frames via PartyFrame.UpdatePartyFrames not raid frames.
-			_G.UIParent:UnregisterEvent('GROUP_ROSTER_UPDATE')
+			UIParent:UnregisterEvent('GROUP_ROSTER_UPDATE')
 		end
 
 		-- shutdown monk stagger bar background updates
@@ -1398,17 +1428,19 @@ do
 					local frame = _G.PlayerFrame
 					HideFrame(frame)
 
-					-- For the damn vehicle support:
-					frame:RegisterEvent('PLAYER_ENTERING_WORLD')
-					frame:RegisterEvent('UNIT_ENTERING_VEHICLE')
-					frame:RegisterEvent('UNIT_ENTERED_VEHICLE')
-					frame:RegisterEvent('UNIT_EXITING_VEHICLE')
-					frame:RegisterEvent('UNIT_EXITED_VEHICLE')
+					if not E.Retail then
+						-- For the damn vehicle support:
+						frame:RegisterEvent('PLAYER_ENTERING_WORLD')
+						frame:RegisterEvent('UNIT_ENTERING_VEHICLE')
+						frame:RegisterEvent('UNIT_ENTERED_VEHICLE')
+						frame:RegisterEvent('UNIT_EXITING_VEHICLE')
+						frame:RegisterEvent('UNIT_EXITED_VEHICLE')
 
-					-- User placed frames don't animate
-					frame:SetMovable(true)
-					frame:SetUserPlaced(true)
-					frame:SetDontSavePosition(true)
+						-- User placed frames don't animate
+						frame:SetMovable(true)
+						frame:SetUserPlaced(true)
+						frame:SetDontSavePosition(true)
+					end
 				end
 
 				if E.Retail then
@@ -1467,10 +1499,12 @@ do
 					end
 				end
 			elseif disable.arena and strmatch(unit, 'arena%d?$') then
-				if _G.ArenaEnemyFramesContainer then -- Retail
-					HideFrame(_G.ArenaEnemyFramesContainer, 1)
-					HideFrame(_G.ArenaEnemyPrepFramesContainer, 1)
-					HideFrame(_G.ArenaEnemyMatchFramesContainer, 1)
+				if _G.CompactArenaFrame then -- Retail
+					HideFrame(_G.CompactArenaFrame, 1)
+
+					for _, frame in next, _G.CompactArenaFrame.memberUnitFrames do
+						HideFrame(frame, true)
+					end
 				elseif _G.ArenaEnemyFrames then
 					_G.ArenaEnemyFrames:UnregisterAllEvents()
 					_G.ArenaPrepFrames:UnregisterAllEvents()

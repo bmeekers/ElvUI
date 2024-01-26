@@ -11,14 +11,13 @@ local GetNumSpecializations = GetNumSpecializations
 local GetPvpTalentInfoByID = GetPvpTalentInfoByID
 local GetSpecialization = GetSpecialization
 local GetSpecializationInfo = GetSpecializationInfo
-local HideUIPanel = HideUIPanel
 local IsControlKeyDown = IsControlKeyDown
 local IsShiftKeyDown = IsShiftKeyDown
-local LoadAddOn = LoadAddOn
 local SetLootSpecialization = SetLootSpecialization
 local SetSpecialization = SetSpecialization
-local ShowUIPanel = ShowUIPanel
+local ToggleTalentFrame = ToggleTalentFrame
 
+local LoadAddOn = (C_AddOns and C_AddOns.LoadAddOn) or LoadAddOn
 local C_SpecializationInfo_GetAllSelectedPvpTalentIDs = C_SpecializationInfo.GetAllSelectedPvpTalentIDs
 local C_Traits_GetConfigInfo = C_Traits.GetConfigInfo
 
@@ -118,7 +117,7 @@ local function OnEvent(self, event, loadoutID)
 			tinsert(builds, STARTER_ID)
 		end
 
-		if event == 'TRAIT_CONFIG_DELETED'  then
+		if event == 'TRAIT_CONFIG_DELETED' then
 			for index = #loadoutList, 2, -1 do -- reverse loop to remove the deleted config from the loadout list
 				local loadout = loadoutList[index]
 				if loadout and loadout.arg1 == loadoutID then
@@ -232,17 +231,13 @@ local function OnClick(self, button)
 
 	local menu
 	if button == 'LeftButton' then
-		local frame = _G.ClassTalentFrame
-		if not frame then
+		if not _G.ClassTalentFrame then
 			LoadAddOn('Blizzard_ClassTalentUI')
-			frame = _G.ClassTalentFrame
 		end
 
 		if IsShiftKeyDown() then
-			if frame:IsShown() then
-				HideUIPanel(frame)
-			else
-				ShowUIPanel(frame)
+			if not E:AlertCombat() then
+				ToggleTalentFrame(_G.TalentMicroButton.suggestedTab)
 			end
 		else
 			menu = IsControlKeyDown() and loadoutList or specList

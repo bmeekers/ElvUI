@@ -9,7 +9,6 @@ local EasyMenu = EasyMenu
 local GetMouseFocus = GetMouseFocus
 local HideUIPanel = HideUIPanel
 local IsShiftKeyDown = IsShiftKeyDown
-local InCombatLockdown = InCombatLockdown
 local BreakUpLargeNumbers = BreakUpLargeNumbers
 local ShowGarrisonLandingPage = ShowGarrisonLandingPage
 local C_Garrison_HasGarrison = C_Garrison.HasGarrison
@@ -319,12 +318,12 @@ local function OnEnter()
 end
 
 local function OnClick(self, btn)
-	if InCombatLockdown() then _G.UIErrorsFrame:AddMessage(E.InfoColor.._G.ERR_NOT_IN_COMBAT) return end
+	if E:AlertCombat() then return end
 
 	if btn == 'RightButton' then
 		E:SetEasyMenuAnchor(E.EasyMenu, self)
 		EasyMenu(menuList, E.EasyMenu, nil, nil, nil, 'MENU')
-	else
+	elseif _G.ExpansionLandingPageMinimapButton:IsShown() then
 		_G.ExpansionLandingPageMinimapButton:ToggleLandingPage()
 	end
 end

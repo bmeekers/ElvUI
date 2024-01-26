@@ -2,12 +2,77 @@ local E, L, V, P, G = unpack(ElvUI)
 local S = E:GetModule('Skins')
 
 local _G = _G
-local gsub, pairs, strmatch = gsub, pairs, strmatch
+local gsub, next = gsub, next
 local hooksecurefunc = hooksecurefunc
 
-local GetNumQuestLogEntries = GetNumQuestLogEntries
-local GetQuestLogTitle = GetQuestLogTitle
-local IsQuestComplete = IsQuestComplete
+local GossipTextColors = {
+	['000000'] = 'ffffff',
+	['414141'] = '7b8489',
+}
+
+local function Gossip_SetTextColor(text, r, g, b)
+	if r ~= 1 or g ~= 1 or b ~= 1 then
+		text:SetTextColor(1, 1, 1)
+	end
+end
+
+local function Gossip_ReplaceColor(color)
+	return '|cFF' .. (GossipTextColors[color] or color)
+end
+
+local function Gossip_SetFormattedText(button, textFormat, text, skip)
+	if skip or not text or text == '' then return end
+
+	local colorText, colorCount = gsub(textFormat, '|c[fF][fF](%x%x%x%x%x%x)', Gossip_ReplaceColor)
+	if colorCount > 0 then
+		button:SetFormattedText(colorText, text, true)
+	end
+end
+
+local function Gossip_SetText(button, text)
+	if not text or text == '' then return end
+
+	local startText = text
+
+	local iconText, iconCount = gsub(text, ':32:32:0:0', ':32:32:0:0:64:64:5:59:5:59')
+	if iconCount > 0 then text = iconText end
+
+	local colorText, colorCount = gsub(text, '|c[fF][fF](%x%x%x%x%x%x)', Gossip_ReplaceColor)
+	if colorCount > 0 then text = colorText end
+
+	if startText ~= text then
+		button:SetFormattedText('%s', text, true)
+	end
+end
+
+local function ItemTextPage_SetTextColor(pageText, headerType, r, g, b)
+	if r ~= 1 or g ~= 1 or b ~= 1 then
+		pageText:SetTextColor(headerType, 1, 1, 1)
+	end
+end
+
+local function GreetingPanel_Update(frame)
+	for _, button in next, { frame.ScrollTarget:GetChildren() } do
+		if not button.IsSkinned then
+			if button.GreetingText then
+				button.GreetingText:SetTextColor(1, 1, 1)
+				hooksecurefunc(button.GreetingText, 'SetTextColor', Gossip_SetTextColor)
+			end
+
+			local fontString = button.GetFontString and button:GetFontString()
+			if fontString then
+				fontString:SetTextColor(1, 1, 1)
+				hooksecurefunc(fontString, 'SetTextColor', Gossip_SetTextColor)
+
+				Gossip_SetText(button, button:GetText())
+				hooksecurefunc(button, 'SetText', Gossip_SetText)
+				hooksecurefunc(button, 'SetFormattedText', Gossip_SetFormattedText)
+			end
+
+			button.IsSkinned = true
+		end
+	end
+end
 
 local function createParchment(frame)
 	local tex = frame:CreateTexture(nil, 'ARTWORK')
@@ -19,29 +84,19 @@ end
 function S:GossipFrame()
 	if not (E.private.skins.blizzard.enable and E.private.skins.blizzard.gossip) then return end
 
-	-- GossipFrame
 	local GossipFrame = _G.GossipFrame
-	S:HandleFrame(GossipFrame, true, nil, 11, -12, -32, 66)
-	S:HandleScrollBar(_G.GossipGreetingScrollFrameScrollBar)
-	S:HandleCloseButton(_G.GossipFrameCloseButton, GossipFrame.backdrop)
+	S:HandlePortraitFrame(GossipFrame, true)
 	S:HandleScrollBar(_G.ItemTextScrollFrameScrollBar)
 	S:HandleCloseButton(_G.ItemTextCloseButton)
 
-	_G.GossipFrameNpcNameText:ClearAllPoints()
-	_G.GossipFrameNpcNameText:Point('CENTER', _G.GossipNpcNameFrame, 'CENTER', -1, 0)
+	local GreetingPanel = _G.GossipFrame.GreetingPanel
+	S:HandleTrimScrollBar(GreetingPanel.ScrollBar)
+	S:HandleButton(GreetingPanel.GoodbyeButton, true)
 
-	for i = 1, _G.NUMGOSSIPBUTTONS do
-		_G['GossipTitleButton'..i..'GossipIcon']:SetSize(16, 16)
-		_G['GossipTitleButton'..i..'GossipIcon']:SetPoint('TOPLEFT', 3, 1)
-	end
-
-	S:HandleButton(_G.GossipFrameGreetingGoodbyeButton)
-	_G.GossipFrameGreetingGoodbyeButton:Point('BOTTOMRIGHT', -38, 72)
-
-	local GossipGreetingScrollFrame = _G.GossipGreetingScrollFrame
-	GossipGreetingScrollFrame:CreateBackdrop('Transparent')
-	GossipGreetingScrollFrame.backdrop:Point('TOPLEFT', 0, 0)
-	GossipGreetingScrollFrame.backdrop:Point('BOTTOMRIGHT', 0, 2)
+	GreetingPanel:StripTextures()
+	GreetingPanel:CreateBackdrop('Transparent')
+	GreetingPanel.backdrop:Point('TOPLEFT', GreetingPanel.ScrollBox, 0, 0)
+	GreetingPanel.backdrop:Point('BOTTOMRIGHT', GreetingPanel.ScrollBox, 0, 11)
 
 	local ItemTextFrame = _G.ItemTextFrame
 	ItemTextFrame:StripTextures()
@@ -54,77 +109,32 @@ function S:GossipFrame()
 	ItemTextScrollFrame:DisableDrawLayer('ARTWORK')
 	ItemTextScrollFrame:DisableDrawLayer('BACKGROUND')
 
-	S:HandleNextPrevButton(_G.ItemTextPrevPageButton)
+	GossipFrame.backdrop:ClearAllPoints()
+	GossipFrame.backdrop:Point('TOPLEFT', GreetingPanel.ScrollBox, -10, 70)
+	GossipFrame.backdrop:Point('BOTTOMRIGHT', GreetingPanel.ScrollBox, 40, -28)
+
 	S:HandleNextPrevButton(_G.ItemTextNextPageButton)
+	S:HandleNextPrevButton(_G.ItemTextPrevPageButton)
 
-	_G.ItemTextPageText:SetTextColor(1, 1, 1)
-	hooksecurefunc(_G.ItemTextPageText, 'SetTextColor', function(pageText, headerType, r, g, b)
-		if r ~= 1 or g ~= 1 or b ~= 1 then
-			pageText:SetTextColor(headerType, 1, 1, 1)
+	if E.private.skins.parchmentRemoverEnable then
+		_G.QuestFont:SetTextColor(1, 1, 1)
+		_G.ItemTextPageText:SetTextColor('P', 1, 1, 1)
+
+		hooksecurefunc(_G.ItemTextPageText, 'SetTextColor', ItemTextPage_SetTextColor)
+		hooksecurefunc(GreetingPanel.ScrollBox, 'Update', GreetingPanel_Update)
+
+		if GossipFrame.Background then
+			GossipFrame.Background:Hide()
 		end
-	end)
-
-	local StripAllTextures = { 'GossipFrameGreetingPanel', 'GossipGreetingScrollFrame' }
-
-	for _, object in pairs(StripAllTextures) do
-		_G[object]:StripTextures()
-	end
-
-	if not E.private.skins.parchmentRemoverEnable then
-		local spellTex = createParchment(GossipGreetingScrollFrame)
-		spellTex:SetInside(GossipGreetingScrollFrame.backdrop)
-		GossipGreetingScrollFrame.spellTex = spellTex
+	else
+		local spellTex = createParchment(GreetingPanel)
+		spellTex:SetInside(GreetingPanel.backdrop)
+		GreetingPanel.spellTex = spellTex
 
 		local itemTex = createParchment(ItemTextFrame)
 		itemTex:SetInside(ItemTextScrollFrame, -5)
 		ItemTextFrame.itemTex = itemTex
-	else
-		_G.GossipGreetingText:SetTextColor(1, 1, 1)
-
-		hooksecurefunc('GossipFrameUpdate', function()
-			for i = 1, _G.NUMGOSSIPBUTTONS do
-				local button = _G['GossipTitleButton'..i]
-				local icon = _G['GossipTitleButton'..i..'GossipIcon']
-				local text = button:GetFontString()
-
-				if text and text:GetText() then
-					local textString = gsub(text:GetText(), '|c[Ff][Ff]%x%x%x%x%x%x(.+)|r', '%1')
-
-					button:SetText(textString)
-					text:SetTextColor(1, 1, 1)
-
-					if button.type == 'Available' or button.type == 'Active' then
-						if button.type == 'Active' then
-							icon:SetDesaturation(1)
-							text:SetTextColor(.6, .6, .6)
-						else
-							icon:SetDesaturation(0)
-							text:SetTextColor(1, .8, .1)
-						end
-
-						local numEntries = GetNumQuestLogEntries()
-						for k = 1, numEntries, 1 do
-							local questLogTitleText, _, _, _, _, isComplete, _, questId = GetQuestLogTitle(k)
-							if strmatch(questLogTitleText, textString) then
-								if (isComplete == 1 or IsQuestComplete(questId)) then
-									icon:SetDesaturation(0)
-									button:GetFontString():SetTextColor(1, .8, .1)
-									break
-								end
-							end
-						end
-					end
-				end
-			end
-		end)
 	end
-
-	local NPCFriendshipStatusBar = _G.NPCFriendshipStatusBar
-	NPCFriendshipStatusBar:StripTextures()
-	NPCFriendshipStatusBar:SetStatusBarTexture(E.media.normTex)
-	NPCFriendshipStatusBar:CreateBackdrop()
-
-	E:RegisterStatusBar(NPCFriendshipStatusBar)
 end
 
 S:AddCallback('GossipFrame')

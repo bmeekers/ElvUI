@@ -1,7 +1,7 @@
 local E, _, V, P, G = unpack(ElvUI)
 local C, L = unpack(E.Config)
 local TT = E:GetModule('Tooltip')
-local Skins = E:GetModule('Skins')
+local S = E:GetModule('Skins')
 local ACH = E.Libs.ACH
 
 local tonumber = tonumber
@@ -30,7 +30,7 @@ General.showElvUIUsers = ACH:Toggle(L["Show ElvUI Users"], L["Show ElvUI users a
 General.itemQuality = ACH:Toggle(L["Item Quality"], L["Color tooltip border based on Item Quality."], 9)
 General.inspectDataEnable = ACH:Toggle(L["Inspect Data"], L["Display the item level and current specialization of the unit on modifier press."], 10, nil, nil, nil, nil, nil, nil, not E.Retail)
 General.fadeOut = ACH:Toggle(L["Fade Out"], L["Fade out the tooltip when it disappers, instant otherwise. Cursor anchored tooltips are unaffected."], 11, nil, nil, nil, nil, nil, nil, not E.Retail)
-General.colorAlpha = ACH:Range(L["OPACITY"], nil, 12, { isPercent = true, min = 0, max = 1, step = 0.01 }, nil, nil, function(info, value) E.db.tooltip[info[#info]] = value; Skins:StyleTooltips() end)
+General.colorAlpha = ACH:Range(L["OPACITY"], nil, 12, { isPercent = true, min = 0, max = 1, step = 0.01 }, nil, nil, function(info, value) E.db.tooltip[info[#info]] = value; S:StyleTooltips() end)
 
 General.modifierGroup = ACH:Group(L["Spell/Item IDs"], nil, -2)
 General.modifierGroup.args.modifierID = ACH:Select(L["Modifier for IDs"], nil, 1, modifierValues)
@@ -65,19 +65,19 @@ General.fontGroup.args.spacer = ACH:Spacer(2)
 
 General.fontGroup.args.header = ACH:Group(L["Tooltip Header"], nil, 3)
 General.fontGroup.args.header.args.headerFont = ACH:SharedMediaFont(L["Font"], nil, 1)
-General.fontGroup.args.header.args.headerFontOutline = ACH:Select(L["Font Outline"], nil, 2, C.Values.FontFlags)
+General.fontGroup.args.header.args.headerFontOutline = ACH:FontFlags(L["Font Outline"], nil, 2)
 General.fontGroup.args.header.args.headerFontSize = ACH:Range(L["Font Size"], nil, 3, C.Values.FontSize)
 General.fontGroup.args.header.inline = true
 
 General.fontGroup.args.body = ACH:Group(L["Tooltip Body"], nil, 4)
 General.fontGroup.args.body.args.font = ACH:SharedMediaFont(L["Font"], nil, 1)
-General.fontGroup.args.body.args.fontOutline = ACH:Select(L["Font Outline"], nil, 2, C.Values.FontFlags)
+General.fontGroup.args.body.args.fontOutline = ACH:FontFlags(L["Font Outline"], nil, 2)
 General.fontGroup.args.body.args.textFontSize = ACH:Range(L["Font Size"], nil, 3, C.Values.FontSize)
 General.fontGroup.args.body.inline = true
 
 General.healthBar = ACH:Group(L["Health Bar"], nil, 80, nil, function(info) return E.db.tooltip.healthBar[info[#info]] end, function(info, value) E.db.tooltip.healthBar[info[#info]] = value; end)
 General.healthBar.args.statusPosition = ACH:Select(L["Position"], nil, 1, { BOTTOM = L["Bottom"], TOP = L["Top"], DISABLED = L["Disabled"] })
-General.healthBar.args.height = ACH:Range(L["Height"], nil, 3, { min = 2, max = 15, step = 1 }, nil, nil, function(_, value) E.db.tooltip.healthBar.height = value; if not GameTooltip:IsForbidden() then GameTooltipStatusBar:Height(value); end end, function() return E.db.tooltip.healthBar.statusPosition == 'DISABLED' end)
+General.healthBar.args.height = ACH:Range(L["Height"], nil, 3, { min = 2, max = 32, step = 1 }, nil, nil, function(_, value) E.db.tooltip.healthBar.height = value; if not GameTooltip:IsForbidden() then GameTooltipStatusBar:Height(value); end end, function() return E.db.tooltip.healthBar.statusPosition == 'DISABLED' end)
 General.healthBar.args.text = ACH:Toggle(L["Text"], nil, 3, nil, nil, nil, nil, function(_, value) E.db.tooltip.healthBar.text = value; if not GameTooltip:IsForbidden() then if value then GameTooltipStatusBar.text:Show(); else GameTooltipStatusBar.text:Hide() end end end, function() return E.db.tooltip.healthBar.statusPosition == 'DISABLED' end)
 General.healthBar.args.font = ACH:SharedMediaFont(L["Font"], nil, 4, nil, nil, function(_, value) E.db.tooltip.healthBar.font = value; if not GameTooltip:IsForbidden() then GameTooltipStatusBar.text:FontTemplate(E.Libs.LSM:Fetch('font', E.db.tooltip.healthBar.font), E.db.tooltip.healthBar.fontSize, E.db.tooltip.healthBar.fontOutline) end end, function() return not E.db.tooltip.healthBar.text or E.db.tooltip.healthBar.statusPosition == 'DISABLED' end)
 General.healthBar.args.fontSize = ACH:Range(L["Font Size"], nil, 5, C.Values.FontSize, nil, nil, function(_, value) E.db.tooltip.healthBar.fontSize = value; if not GameTooltip:IsForbidden() then GameTooltipStatusBar.text:FontTemplate(E.Libs.LSM:Fetch('font', E.db.tooltip.healthBar.font), E.db.tooltip.healthBar.fontSize, E.db.tooltip.healthBar.fontOutline) end end, function() return not E.db.tooltip.healthBar.text or E.db.tooltip.healthBar.statusPosition == 'DISABLED' end)

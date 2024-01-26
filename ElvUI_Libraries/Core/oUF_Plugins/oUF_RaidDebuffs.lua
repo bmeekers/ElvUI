@@ -10,7 +10,7 @@ if not _G.oUF_RaidDebuffs then
 	_G.oUF_RaidDebuffs = addon
 end
 
-local LibDispel = _G.LibStub('LibDispel-1.0')
+local LibDispel = LibStub('LibDispel-1.0')
 local DispelFilter = LibDispel:GetMyDispelTypes()
 
 local abs = math.abs
@@ -20,7 +20,6 @@ local type, pairs, wipe = type, pairs, wipe
 local UnitCanAttack = UnitCanAttack
 local UnitIsCharmed = UnitIsCharmed
 local GetSpellInfo = GetSpellInfo
-local UnitAura = UnitAura
 local GetTime = GetTime
 
 local debuff_data = {}
@@ -180,7 +179,7 @@ local function Update(self, event, unit, isFullUpdate, updatedAuras)
 	local canAttack = UnitCanAttack('player', unit)
 
 	local index = 1
-	local name, icon, count, debuffType, duration, expiration, _, _, _, spellID, _, _, _, _, modRate = UnitAura(unit, index, 'HARMFUL')
+	local name, icon, count, debuffType, duration, expiration, _, _, _, spellID, _, _, _, _, modRate = oUF:GetAuraData(unit, index, 'HARMFUL')
 	while name do
 		--we coudln't dispel if the unit its charmed, or its not friendly
 		if addon.ShowDispellableDebuff and (self.RaidDebuffs.showDispellableDebuff ~= false) and debuffType and (not isCharmed) and (not canAttack) then
@@ -217,7 +216,7 @@ local function Update(self, event, unit, isFullUpdate, updatedAuras)
 		end
 
 		index = index + 1
-		name, icon, count, debuffType, duration, expiration, _, _, _, spellID, _, _, _, _, modRate = UnitAura(unit, index, 'HARMFUL')
+		name, icon, count, debuffType, duration, expiration, _, _, _, spellID, _, _, _, _, modRate = oUF:GetAuraData(unit, index, 'HARMFUL')
 	end
 
 	if self.RaidDebuffs.forceShow then

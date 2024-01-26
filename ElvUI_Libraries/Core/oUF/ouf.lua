@@ -1,5 +1,5 @@
 local parent, ns = ...
-local GetAddOnMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+local GetAddOnMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 local global = GetAddOnMetadata(parent, 'X-oUF')
 local _VERSION = '@project-version@'
 if(_VERSION:find('project%-version')) then
@@ -29,10 +29,6 @@ local select, pairs, ipairs = select, pairs, ipairs
 local strupper, strsplit = strupper, strsplit
 local hooksecurefunc = hooksecurefunc
 
-local SecureButton_GetUnit = SecureButton_GetUnit
-local SecureButton_GetModifiedUnit = SecureButton_GetModifiedUnit
-local GetNamePlateForUnit = C_NamePlate.GetNamePlateForUnit
-
 local SecureHandlerSetFrameRef = SecureHandlerSetFrameRef
 local RegisterAttributeDriver = RegisterAttributeDriver
 local UnregisterUnitWatch = UnregisterUnitWatch
@@ -40,7 +36,18 @@ local RegisterUnitWatch = RegisterUnitWatch
 local CreateFrame = CreateFrame
 local IsLoggedIn = IsLoggedIn
 local UnitGUID = UnitGUID
-local SetCVar = SetCVar
+local Mixin = Mixin
+
+local SecureButton_GetUnit = SecureButton_GetUnit
+local SecureButton_GetModifiedUnit = SecureButton_GetModifiedUnit
+local PingableType_UnitFrameMixin = PingableType_UnitFrameMixin
+
+local GetAuraDataByIndex = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex
+local UnpackAuraData = AuraUtil and AuraUtil.UnpackAuraData
+local UnitAura = UnitAura
+
+local GetNamePlateForUnit = C_NamePlate.GetNamePlateForUnit
+local SetCVar = C_CVar.SetCVar
 -- end
 
 local UFParent = CreateFrame('Frame', (global or parent) .. 'Parent', UIParent, 'SecureHandlerStateTemplate')
@@ -313,6 +320,11 @@ local function initObject(unit, style, styleFunc, header, ...)
 		-- Expose the frame through oUF.objects.
 		tinsert(objects, object)
 
+		-- add the mixin for pings
+		if PingableType_UnitFrameMixin then
+			Mixin(object, PingableType_UnitFrameMixin)
+		end
+
 		-- We have to force update the frames when PEW fires.
 		-- It's also important to evaluate units before running an update
 		-- because sometimes events that are required for unit updates end up
@@ -339,6 +351,15 @@ local function initObject(unit, style, styleFunc, header, ...)
 			object:SetAttribute('*type1', 'target')
 			object:SetAttribute('*type2', 'togglemenu')
 			object:SetAttribute('toggleForVehicle', true)
+
+			--[[ frame.IsPingable
+			This boolean can be set to false to disable the frame from being pingable. Enabled by default.
+			--]]
+			--[[ Override: frame:GetContextualPingType()
+			Used to define which contextual ping is used for the frame.
+			By default this wraps `C_Ping.GetContextualPingTypeForUnit(UnitGUID(frame.unit))`.
+			--]]
+			object:SetAttribute('ping-receiver', true)
 
 			if(isEventlessUnit(objectUnit)) then
 				oUF:HandleEventlessUnit(object)
@@ -630,6 +651,8 @@ do
 				frame:SetAttribute('*type1', 'target')
 				frame:SetAttribute('*type2', 'togglemenu')
 				frame:SetAttribute('oUF-guessUnit', unit)
+
+				frame:SetAttribute('ping-receiver', true)
 			end
 
 			local body = header:GetAttribute('oUF-initialConfigFunction')
@@ -806,7 +829,9 @@ function oUF:SpawnNamePlates(namePrefix, nameplateCallback, nameplateCVars)
 	eventHandler:RegisterEvent('NAME_PLATE_UNIT_ADDED')
 	eventHandler:RegisterEvent('NAME_PLATE_UNIT_REMOVED')
 	eventHandler:RegisterEvent('PLAYER_TARGET_CHANGED')
+	eventHandler:RegisterEvent('UNIT_MAXHEALTH')
 	eventHandler:RegisterEvent('UNIT_FACTION')
+	eventHandler:RegisterEvent('UNIT_HEALTH')
 
 	if(IsLoggedIn()) then
 		if(nameplateCVars) then
@@ -827,16 +852,18 @@ function oUF:SpawnNamePlates(namePrefix, nameplateCallback, nameplateCVars)
 			end
 		elseif(event == 'PLAYER_TARGET_CHANGED') then
 			local nameplate = GetNamePlateForUnit('target')
+			local unitFrame = nameplate and nameplate.unitFrame
+
 			if(nameplateCallback) then
-				nameplateCallback(nameplate and nameplate.unitFrame, event, 'target')
+				nameplateCallback(unitFrame, event, 'target')
 			end
 
 			-- UAE is called after the callback to reduce the number of
 			-- ForceUpdate calls layout devs have to do themselves
-			if(nameplate) then
+			if unitFrame and unitFrame.UpdateAllElements then
 				nameplate.unitFrame:UpdateAllElements(event)
 			end
-		elseif(event == 'UNIT_FACTION' and unit) then
+		elseif((event == 'UNIT_FACTION' or event == 'UNIT_HEALTH' or event == 'UNIT_MAXHEALTH') and unit) then
 			local nameplate = GetNamePlateForUnit(unit)
 			if(not nameplate) then return end
 
@@ -869,7 +896,9 @@ function oUF:SpawnNamePlates(namePrefix, nameplateCallback, nameplateCVars)
 
 			-- UAE is called after the callback to reduce the number of
 			-- ForceUpdate calls layout devs have to do themselves
-			nameplate.unitFrame:UpdateAllElements(event)
+			if nameplate.unitFrame.UpdateAllElements then
+				nameplate.unitFrame:UpdateAllElements(event)
+			end
 		elseif(event == 'NAME_PLATE_UNIT_REMOVED' and unit) then
 			local nameplate = GetNamePlateForUnit(unit)
 			if(not nameplate) then return end
@@ -904,6 +933,14 @@ function oUF:AddElement(name, update, enable, disable)
 		enable = enable;
 		disable = disable;
 	}
+end
+
+function oUF:GetAuraData(unitToken, index, filter)
+	if oUF.isRetail then
+		return UnpackAuraData(GetAuraDataByIndex(unitToken, index, filter))
+	else
+		return UnitAura(unitToken, index, filter)
+	end
 end
 
 oUF.version = _VERSION
